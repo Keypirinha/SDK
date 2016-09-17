@@ -17,12 +17,12 @@ Development Kit (SDK).
 The recommended way is to clone the official git repository as the `master`
 branch is meant to be *stable*:
 
-    git clone https://github.com/Keypirinha/Keypirinha-SDK.git keypirinha-sdk
+    git clone https://github.com/Keypirinha/SDK.git keypirinha-sdk
 
 Otherwise, GitHub conveniently allows to [download an archive][current] of the
 current revision.
 
-[current]: https://github.com/Keypirinha/Keypirinha-SDK/archive/master.zip
+[current]: https://github.com/Keypirinha/SDK/archive/master.zip
 
 
 ## Install
@@ -104,4 +104,5 @@ in the `LICENSE` file located in this directory.
    expected.
 4. Send a pull request.
 
-[repo]: https://github.com/Keypirinha/Keypirinha-SDK.git
+
+[repo]: https://github.com/Keypirinha/SDK.git
