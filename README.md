@@ -100,9 +100,7 @@ in the `LICENSE` file located in this directory.
    feature idea or a bug.
 2. Fork [the repository][repo] on GitHub to start making your changes to the
    **master** branch (or branch off of it).
-3. Write a test which shows that the bug was fixed or that the feature works as
-   expected.
-4. Send a pull request.
+3. Send a pull request.
 
 
 [repo]: https://github.com/Keypirinha/SDK.git
