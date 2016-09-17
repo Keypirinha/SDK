@@ -1,0 +1,35 @@
+# Keypirinha launcher (keypirinha.com)
+
+import keypirinha as kp
+import keypirinha_util as kpu
+
+class {{plugin_name}}(kp.Plugin):
+    """
+    One-line description of your plugin.
+
+    This is block is a longer and more detailed description of your plugin that
+    may span on several lines, although not being required by the application.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def on_start(self):
+        pass
+
+    def on_catalog(self):
+        pass
+
+    def on_suggest(self, user_input, items_chain):
+        pass
+
+    def on_execute(self, item, action):
+        pass
+
+    def on_activated(self):
+        pass
+
+    def on_deactivated(self):
+        pass
+
+    def on_events(self, flags):
+        pass
