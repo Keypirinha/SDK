@@ -131,6 +131,9 @@ def validate_package_name(name):
     if name_lc[0] not in ascii_alnum or name_lc[-1] not in ascii_alnum:
         return False
 
+    if "keypirinha" in name_lc:
+        return False
+
     lastc = ""
     for c in name_lc:
         if c in extra_chars:
