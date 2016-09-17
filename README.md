@@ -7,7 +7,7 @@ Development Kit (SDK).
 ## Features
 
 * Create an add-on skeleton to start developing your plugin
-* Build a redistributable package that is ready-to-use by other Keypirinha users
+* Build a redistributable package that is ready-to-use by Keypirinha users
 * Test some features with its bundled standalone Python3 interpreter that is a
   replicate of Keypirinha's embedded one
 
@@ -19,7 +19,7 @@ branch is meant to be *stable*:
 
     git clone https://github.com/Keypirinha/Keypirinha-SDK.git keypirinha-sdk
 
-Otheriwse, GitHub conveniently allows to [download an archive][current] of the
+Otherwise, GitHub conveniently allows to [download an archive][current] of the
 current revision.
 
 [current]: https://github.com/Keypirinha/Keypirinha-SDK/archive/master.zip
@@ -47,7 +47,7 @@ running the `kpenv` script.
 Particularly it defines `KEYPIRINHA_SDK`, that is the path to the directory of
 the SDK.
 
-It also prepend the `cmd` directory to the current `PATH`.
+It also prepends the `cmd` directory to the current `PATH`.
 
 
 ### Create a Package
