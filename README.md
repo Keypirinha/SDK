@@ -8,7 +8,7 @@ Development Kit (SDK).
 
 * Create an add-on skeleton to start developing your plugin
 * Build a redistributable package that is ready-to-use by Keypirinha users
-* Test some features with its bundled standalone Python3 interpreter that is a
+* Test some features with the bundled standalone Python3 interpreter that is a
   replicate of Keypirinha's embedded one
 
 
@@ -29,25 +29,24 @@ current revision.
 
 No particular configuration is required to use the SDK.
 
-The `cmd` directory has been made specifically to be as non-intrusive as
-possible by adding only the minimum required to access SDK's high-level
-features.
-
 
 ## Usage
 
-High-level features of the SDK are accessible via the `cmd` directory.
+For convenience, high-level features of the SDK are accessible via the `cmd`
+directory, which you can safely add to your `PATH` since it has been made
+specifically to be as non-intrusive as possible.
 
 
 ### Environment Setup
 
 Once you have opened a terminal, you may want to setup SDK's environment by
-running the `kpenv` script.
+running the `cmd/kpenv` script.
 
 Particularly it defines `KEYPIRINHA_SDK`, that is the path to the directory of
 the SDK.
 
-It also prepends the `cmd` directory to the current `PATH`.
+It also prepends the `cmd` directory to the `PATH` of the current terminal
+session.
 
 
 ### Create a Package
@@ -67,7 +66,7 @@ Once you have developed and tested your package, you can build its final
 redistributable archive. Among other things, the `make.cmd` script located in
 your package directory allows you to do that.
 
-Note that the SDK's environment must be setup by running the `kpenv` script
+Note that the SDK's environment must be setup by running the `cmd/kpenv` script
 first.
 
 Then, from your package's directory:
@@ -81,17 +80,19 @@ Usage:
 
 ### Python Interpreter
 
-The bootstrap script `kpy` allows to execute any Python3 script, or, if called
-without argument, to start the interpreter in *interactive mode*.
+The bootstrap script `cmd/kpy` allows to execute any Python3 script using the
+bundled and standalone interpreter, that is a replicate of the one that is
+embedded into Keypirinha.
 
-It works exactly the same way than the `python.exe` executable of the standard
-Python distribution.
+You can also start the interpreter in *interactive mode*, as you would do with
+the `python.exe` executable of the standard Python distribution.
 
 
 ## License
 
-The SDK is distributed under the terms of the `zlib` license, which you can find
-in the `LICENSE` file located in this directory.
+The SDK is distributed under the terms of the `zlib` license unless stated
+otherwise in files from third-party projects. See the `LICENSE` file located in
+this directory for more information.
 
 
 ## Contribute
@@ -99,7 +100,7 @@ in the `LICENSE` file located in this directory.
 1. Check for open issues or open a fresh issue to start a discussion around a
    feature idea or a bug.
 2. Fork [the repository][repo] on GitHub to start making your changes to the
-   **master** branch (or branch off of it).
+   **dev** branch (or branch off of it).
 3. Send a pull request.
 
 
