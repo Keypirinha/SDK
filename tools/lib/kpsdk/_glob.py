@@ -4,8 +4,8 @@
 import glob as _glob
 import os as _os
 
-_is_windows = _os.name.lower() == "nt"
-if _is_windows:
+_IS_WINDOWS = _os.name.lower() == "nt"
+if _IS_WINDOWS:
     import ctypes as _ctypes
 
 __all__ = ["glob", "iglob", "escape", "has_magic"]
@@ -56,7 +56,7 @@ def iglob(*args, include_hidden=False, **kwargs):
 def _ishidden(path):
     if path[0] in (".", b"."):
         return True
-    elif _is_windows:
+    elif _IS_WINDOWS:
         if not isinstance(path, str):
             raise ValueError
         attr = _ctypes.windll.kernel32.GetFileAttributesW(path)
