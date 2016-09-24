@@ -2,23 +2,57 @@
 # Copyright 2013-2016 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import configparser
+import ctypes
 import os
 
 __all__ = ["Config"]
+
+_IS_WINDOWS = os.name.lower() == "nt"
+if _IS_WINDOWS:
+    from . import windll
 
 class Config:
     """
     A replacement of ``configparser.ConfigParser`` that is compliant with
     Keypirinha's configuration file format.
     """
-    def __init__(self, defaults={}):
+    VAR_SECTION_NAME = "var"
+
+    def __init__(self, extra_defaults={}):
         self.refdir = None
         self.parser = configparser.ConfigParser(
-            defaults=defaults,
+            defaults=None,
             delimiters=("="),
             comment_prefixes=("#"),
             strict=True, # disallow section/option duplicates
             interpolation=configparser.ExtendedInterpolation())
+
+        # populate the [var] section with the KNOWNFOLDER_* and
+        # KNOWNFOLDERGUID_* values
+        if _IS_WINDOWS:
+            known_folders_dict = {}
+            for name in dir(windll):
+                if name.startswith("FOLDERID_"):
+                    value = getattr(windll, name)
+                    if isinstance(value, str):
+                        kf_name = name[len("FOLDERID_"):].upper()
+                        kf_guid = value
+                        try:
+                            kf_path = windll.get_known_folder_path(kf_guid)
+                        except OSError:
+                            continue
+                        known_folders_dict['KNOWNFOLDER_' + kf_name] = kf_path
+                        known_folders_dict['KNOWNFOLDERGUID_' + kf_name] = kf_guid
+            if known_folders_dict:
+                self.parser.read_dict(
+                    {self.VAR_SECTION_NAME: known_folders_dict},
+                    source="<known_folders>")
+
+        if extra_defaults:
+            self.parser.read_dict(extra_defaults, source="<extra_defaults>")
+
+    def __getattr__(self, attr):
+        return getattr(self.parser, attr)
 
     def setrefdir(self, path):
         """Set a reference directory for path values (see ``getpath()``)."""
@@ -55,6 +89,3 @@ class Config:
             return os.path.normpath(os.path.realpath(value))
         else:
             return value
-
-    def __getattr__(self, attr):
-        return getattr(self.parser, attr)
