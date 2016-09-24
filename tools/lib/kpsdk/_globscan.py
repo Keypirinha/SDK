@@ -7,7 +7,7 @@ from . import _glob
 
 __all__ = ["FsEntry", "globscan", "iglobscan"]
 
-_is_windows = os.name.lower() == "nt"
+_IS_WINDOWS = os.name.lower() == "nt"
 
 class FsEntry:
     """A :py:class:`os.DirEntry` compatible class."""
@@ -169,7 +169,7 @@ def _is_hidden(entry, follow_symlinks=True):
     # note: *entry* can be a DirEntry or a FsEntry
     if entry.name[0] is ".":
         return True
-    if _is_windows:
+    if _IS_WINDOWS:
         attr = entry.stat(follow_symlinks=follow_symlinks).st_file_attributes
         if attr & stat.FILE_ATTRIBUTE_HIDDEN:
             return True

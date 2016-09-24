@@ -8,8 +8,8 @@ import zipfile
 import zlib
 from . import _glob
 
-_is_windows = os.name.lower() == "nt"
-if _is_windows:
+_IS_WINDOWS = os.name.lower() == "nt"
+if _IS_WINDOWS:
     import ctypes
 
 __all__ = ["ZipFile"]
@@ -85,7 +85,7 @@ class ZipFile:
         if arcname_is_utf8 or comment_is_utf8:
             zinfo.flag_bits |= 1 << 11
 
-        if _is_windows:
+        if _IS_WINDOWS:
             # ms-dos attributes
             winattr = ctypes.windll.kernel32.GetFileAttributesW(file)
             if winattr != 0xffffffff: # INVALID_FILE_ATTRIBUTES
