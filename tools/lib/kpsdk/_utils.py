@@ -10,6 +10,7 @@ import sys
 __all__ = [
     "Unbuffered", "ReMatch",
     "die", "info", "warn", "err",
+    "merge_dicts",
     #"cmd_output",
     "dir_is_empty",
     "file_head", "file_mtime_ns", "file_set_readonly",
@@ -76,6 +77,16 @@ def err(*objects, file=sys.stderr, flush=True, **kwargs):
     """Print an error message"""
     print("ERROR: ", end="", file=file, flush=False)
     print(*objects, file=file, flush=flush, **kwargs)
+
+def merge_dicts(*dicts):
+    """Merge several dicts"""
+    final_dict = None
+    for d in dicts:
+        if final_dict is None:
+            final_dict = d.copy()
+        else:
+            final_dict.update(d)
+    return {} if final_dict is None else final_dict
 
 #def cmd_output(args=[], splitlines=False):
 #    """Run a command and return its decoded output"""
