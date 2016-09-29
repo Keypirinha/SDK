@@ -18,18 +18,29 @@ from __future__ import (
 )
 
 # Std lib. imports.
-import re
 from operator import itemgetter
 from functools import partial
 from warnings import warn
 
 # Local imports.
+import natsort.compat.locale
 from natsort.ns_enum import ns
-from natsort.compat.py23 import u_format
+from natsort.compat.py23 import (
+    u_format,
+    py23_str,
+)
 from natsort.utils import (
     _natsort_key,
     _args_to_enum,
     _do_decoding,
+    _regex_chooser,
+    _parse_string_function,
+    _parse_path_function,
+    _parse_number_function,
+    _parse_bytes_function,
+    _pre_split_function,
+    _post_split_function,
+    _post_string_parse_function,
 )
 
 # Make sure the doctest works for either python2 or python3
@@ -132,7 +143,7 @@ def natsort_key(val, key=None, alg=0, **_kwargs):
     """Undocumented, kept for backwards-compatibility."""
     msg = "natsort_key is deprecated as of 3.4.0, please use natsort_keygen"
     warn(msg, DeprecationWarning)
-    return _natsort_key(val, key, _args_to_enum(**_kwargs) | alg)
+    return natsort_keygen(key, alg, **_kwargs)(val)
 
 
 @u_format
@@ -183,25 +194,61 @@ def natsort_keygen(key=None, alg=0, **_kwargs):
         [{u}'num-3', {u}'num2', {u}'num5.10', {u}'num5.3']
 
     """
-    return partial(_natsort_key, key=key, alg=_args_to_enum(**_kwargs) | alg)
+    # Transform old arguments to the ns enum.
+    try:
+        alg = _args_to_enum(**_kwargs) | alg
+    except TypeError:
+        msg = "natsort_keygen: 'alg' argument must be from the enum 'ns'"
+        raise ValueError(msg+', got {0}'.format(py23_str(alg)))
+
+    # Add the _DUMB option if the locale library is broken.
+    if alg & ns.LOCALEALPHA and natsort.compat.locale.dumb_sort():
+        alg |= ns._DUMB
+
+    # Set some variable that will be passed to the factory functions
+    sep = natsort.compat.locale.null_string if alg & ns.LOCALEALPHA else ''
+    regex = _regex_chooser[alg & ns._NUMERIC_ONLY]
+
+    # Create the functions that will be used to split strings.
+    pre = _pre_split_function(alg)
+    post = _post_split_function(alg)
+    after = _post_string_parse_function(alg, sep)
+
+    # Create the high-level parsing functions for strings, bytes, and numbers.
+    string_func = _parse_string_function(
+        alg, sep, regex.split, pre, post, after
+    )
+    if alg & ns.PATH:
+        string_func = _parse_path_function(string_func)
+    bytes_func = _parse_bytes_function(alg)
+    num_func = _parse_number_function(alg, sep)
+
+    # Return the natsort key with the parsing path pre-chosen.
+    return partial(
+        _natsort_key,
+        key=key,
+        string_func=string_func,
+        bytes_func=bytes_func,
+        num_func=num_func
+    )
 
 
 @u_format
 def natsorted(seq, key=None, reverse=False, alg=0, **_kwargs):
     """\
-    Sorts a sequence naturally.
+    Sorts an iterable naturally.
 
-    Sorts a sequence naturally (alphabetically and numerically),
-    not lexicographically. Returns a new copy of the sorted
-    sequence as a list.
+    Sorts an iterable naturally (alphabetically and numerically),
+    not lexicographically. Returns a list containing a sorted copy
+    of the iterable.
 
     Parameters
     ----------
     seq : iterable
-        The sequence to sort.
+        The iterable to sort.
 
     key : callable, optional
-        A key used to determine how to sort each element of the sequence.
+        A key used to determine how to sort each element of the iterable.
         It is **not** applied recursively.
         It should accept a single argument and return a single value.
 
@@ -235,21 +282,8 @@ def natsorted(seq, key=None, reverse=False, alg=0, **_kwargs):
         [{u}'num2', {u}'num3', {u}'num5']
 
     """
-    alg = _args_to_enum(**_kwargs) | alg
-    try:
-        return sorted(seq, reverse=reverse, key=natsort_keygen(key, alg=alg))
-    except TypeError as e:  # pragma: no cover
-        # In the event of an unresolved "unorderable types" error
-        # for string to number type comparisons (not str/bytes),
-        # attempt to sort again, being careful to prevent this error.
-        r = re.compile(r'(?:str|bytes)\(\) [<>] (?:str|bytes)\(\)')
-        if 'unorderable types' in str(e) and not r.search(str(e)):
-            return sorted(seq, reverse=reverse,
-                          key=natsort_keygen(key,
-                                             alg=alg | ns.TYPESAFE))
-        else:
-            # Re-raise if the problem was not "unorderable types"
-            raise
+    natsort_key = natsort_keygen(key, alg, **_kwargs)
+    return sorted(seq, reverse=reverse, key=natsort_key)
 
 
 @u_format
@@ -278,16 +312,6 @@ def humansorted(seq, key=None, reverse=False, alg=0):
     Convenience function to properly sort non-numeric characters
     in a locale-aware fashion (a.k.a "human sorting"). This is a
     wrapper around ``natsorted(seq, alg=ns.LOCALE)``.
-
-    .. warning:: On BSD-based systems (like Mac OS X), the underlying
-                 C library that Python's locale module uses is broken.
-                 On these systems it is recommended that you install
-                 `PyICU <https://pypi.python.org/pypi/PyICU>`_
-                 if you wish to use ``humansorted``, especially if you need
-                 to handle non-ASCII characters.  If you are on
-                 one of systems and get unexpected results, please try
-                 using `PyICU <https://pypi.python.org/pypi/PyICU>`_
-                 before filing a bug report to `natsort`.
 
     Parameters
     ----------
@@ -319,23 +343,7 @@ def humansorted(seq, key=None, reverse=False, alg=0):
 
     Notes
     -----
-    You may find that if you do not explicitly set
-    the locale your results may not be as you expect, although
-    as of ``natsort`` version 4.0.0 the sorting algorithm has been
-    updated to account for a buggy ``locale`` installation.
-    In the below example 'en_US.UTF-8' is used, but you should use your
-    locale::
-
-        >>> import locale
-        >>> # The 'str' call is only to get around a bug on Python 2.x
-        >>> # where 'setlocale' does not expect unicode strings (ironic,
-        >>> # right?)
-        >>> locale.setlocale(locale.LC_ALL, str('en_US.UTF-8'))
-        'en_US.UTF-8'
-
-    It is preferred that you do this before importing `natsort`.
-    If you use `PyICU <https://pypi.python.org/pypi/PyICU>`_ (see warning
-    above) then you should not need to do explicitly set a locale.
+    Please read :ref:`locale_issues` before using `humansorted`.
 
     Examples
     --------
@@ -463,7 +471,6 @@ def index_natsorted(seq, key=None, reverse=False, alg=0, **_kwargs):
         [{u}'baz', {u}'foo', {u}'bar']
 
     """
-    alg = _args_to_enum(**_kwargs) | alg
     if key is None:
         newkey = itemgetter(1)
     else:
@@ -471,19 +478,8 @@ def index_natsorted(seq, key=None, reverse=False, alg=0, **_kwargs):
             return key(itemgetter(1)(x))
     # Pair the index and sequence together, then sort by element
     index_seq_pair = [[x, y] for x, y in enumerate(seq)]
-    try:
-        index_seq_pair.sort(reverse=reverse,
-                            key=natsort_keygen(newkey, alg=alg))
-    except TypeError as e:  # pragma: no cover
-        # In the event of an unresolved "unorderable types" error
-        # attempt to sort again, being careful to prevent this error.
-        if 'unorderable types' in str(e):
-            index_seq_pair.sort(reverse=reverse,
-                                key=natsort_keygen(newkey,
-                                                   alg=alg | ns.TYPESAFE))
-        else:
-            # Re-raise if the problem was not "unorderable types"
-            raise
+    index_seq_pair.sort(reverse=reverse,
+                        key=natsort_keygen(newkey, alg, **_kwargs))
     return [x for x, _ in index_seq_pair]
 
 
@@ -518,8 +514,6 @@ def index_humansorted(seq, key=None, reverse=False, alg=0):
     of the given sequence.
 
     This is a wrapper around ``index_natsorted(seq, alg=ns.LOCALE)``.
-    Please see the ``humansorted`` documentation for caveats of
-    using ``index_humansorted``.
 
     Parameters
     ----------
@@ -552,23 +546,7 @@ def index_humansorted(seq, key=None, reverse=False, alg=0):
 
     Notes
     -----
-    You may find that if you do not explicitly set
-    the locale your results may not be as you expect, although
-    as of ``natsort`` version 4.0.0 the sorting algorithm has been
-    updated to account for a buggy ``locale`` installation.
-    In the below example 'en_US.UTF-8' is used, but you should use your
-    locale::
-
-        >>> import locale
-        >>> # The 'str' call is only to get around a bug on Python 2.x
-        >>> # where 'setlocale' does not expect unicode strings (ironic,
-        >>> # right?)
-        >>> locale.setlocale(locale.LC_ALL, str('en_US.UTF-8'))
-        'en_US.UTF-8'
-
-    It is preferred that you do this before importing `natsort`.
-    If you use `PyICU <https://pypi.python.org/pypi/PyICU>`_ (see warning
-    above) then you should not need to explicitly set a locale.
+    Please read :ref:`locale_issues` before using `humansorted`.
 
     Examples
     --------

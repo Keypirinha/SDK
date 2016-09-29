@@ -15,19 +15,13 @@ class ns(object):
     This class acts like an enum to control the `natsort` algorithm. The
     user may select several options simultaneously by or'ing the options
     together.  For example, to choose ``ns.INT``, ``ns.PATH``, and
-    ``ns.LOCALE``, you could do ``ns.INT | ns.LOCALE | ns.PATH``.
+    ``ns.LOCALE``, you could do ``ns.INT | ns.LOCALE | ns.PATH``. Each
+    function in the :mod:`natsort` package has an `alg` option that accepts
+    this enum to allow fine control over how your input is sorted.
 
     Each option has a shortened 1- or 2-letter form.
 
-    .. warning:: On BSD-based systems (like Mac OS X), the underlying
-                 C library that Python's locale module uses is broken.
-                 On these systems it is recommended that you install
-                 `PyICU <https://pypi.python.org/pypi/PyICU>`_
-                 if you wish to use ``LOCALE``, especially if you need
-                 to handle non-ASCII characters. If you are on one of
-                 systems and get unexpected results, please try using
-                 `PyICU <https://pypi.python.org/pypi/PyICU>`_ before
-                 filing a bug report to ``natsort``.
+    .. note:: Please read :ref:`locale_issues` before using ``ns.LOCALE``.
 
     Attributes
     ----------
@@ -43,14 +37,6 @@ class ns(object):
         Tell `natsort` to take into account any sign (i.e. "-" or "+")
         to the immediate left of a number.  It is the same as setting
         the old `signed` option to `True`.
-    VERSION, V
-        This is a shortcut for ``ns.INT | ns.UNSIGNED``, which is useful
-        when attempting to sort version numbers.  It is the same as
-        setting the old `number_type` option to `None`.  Since
-        ``ns.INT | ns.UNSIGNED`` is default, this is is
-        unnecessary.
-    DIGIT, D
-        Same as `VERSION` above.
     REAL, R
         This is a shortcut for ``ns.FLOAT | ns.SIGNED``, which is useful
         when attempting to sort real numbers.
@@ -69,12 +55,18 @@ class ns(object):
         front. It is the same as setting the old `as_path` option to
         `True`.
     LOCALE, L
-        Tell `natsort` to be locale-aware when sorting strings (everything
-        that was not converted to a number).  Your sorting results will vary
-        depending on your current locale. Generally, the `GROUPLETTERS`
-        option is not needed with `LOCALE` because the `locale` library
-        groups the letters in the same manner (although you may still
-        need `GROUPLETTERS` if there are numbers in your strings).
+        Tell `natsort` to be locale-aware when sorting. This includes both
+        proper sorting of alphabetical characters as well as proper
+        handling of locale-dependent decimal separators and thousands
+        separators. This is a shortcut for
+        ``ns.LOCALEALPHA | ns.LOCALENUM``.
+        Your sorting results will vary depending on your current locale.
+    LOCALEALPHA, LA
+        Tell `natsort` to be locale-aware when sorting, but only for
+        alphabetical characters.
+    LOCALENUM, LN
+        Tell `natsort` to be locale-aware when sorting, but only for
+        decimal separators and thousands separators.
     IGNORECASE, IC
         Tell `natsort` to ignore case when sorting.  For example,
         ``['Banana', 'apple', 'banana', 'Apple']`` would be sorted as
@@ -97,7 +89,8 @@ class ns(object):
         ``['Banana', 'apple', 'banana', 'Apple']`` would be sorted as
         ``['Apple', 'apple', 'Banana', 'banana']``.
         Useless when used with `IGNORECASE`; use with `LOWERCASEFIRST`
-        to reverse the order of upper and lower case.
+        to reverse the order of upper and lower case. Generally not
+        needed with `LOCALE`.
     CAPITALFIRST, C
         Only used when `LOCALE` is enabled. Tell `natsort` to put all
         capitalized words before non-capitalized words. This is essentially
@@ -110,56 +103,51 @@ class ns(object):
         treat these as +Infinity and place them after all the other numbers.
         By default, an NaN be treated as -Infinity and be placed first.
     TYPESAFE, T
-        Try hard to avoid "unorderable types" error on Python 3. It
-        is the same as setting the old `py3_safe` option to `True`.
-        This is only needed if using ``SIGNED`` or if sorting by
-        ``FLOAT``. You shouldn't need to use this unless you are using
-        ``natsort_keygen``. *NOTE:* It cannot resolve the ``TypeError``
-        from trying to compare `str` and `bytes`.
+        Deprecated as of `natsort` version 5.0.0; this option is now
+        a no-op because it is always true.
+    VERSION, V
+        Deprecated as of `natsort` version 5.0.0; this option is now
+        a no-op because it is the default.
+    DIGIT, D
+        Same as `VERSION` above.
 
     Notes
     -----
-    If using `LOCALE`, you may find that if you do not explicitly set
-    the locale your results may not be as you expect... I have found that
-    it depends on the system you are on. To do this is straightforward
-    (in the below example I use 'en_US.UTF-8', but you should use your
-    locale)::
+    If you prefer to use `import natsort as ns` as opposed to
+    `from natsort import natsorted, ns`, the `ns` options are
+    available as top-level imports.
 
-        >>> import locale
-        >>> # The 'str' call is only to get around a bug on Python 2.x
-        >>> # where 'setlocale' does not expect unicode strings (ironic,
-        >>> # right?)
-        >>> locale.setlocale(locale.LC_ALL, str('en_US.UTF-8'))
-        'en_US.UTF-8'
-
-    It is preferred that you do this before importing `natsort`.
-    If you use `PyICU <https://pypi.python.org/pypi/PyICU>`_ (see warning
-    above) then you should not need to do this.
+        >>> import natsort as ns
+        >>> a = ['num5.10', 'num-3', 'num5.3', 'num2']
+        >>> # Which is more natural to write?
+        >>> ns.natsorted(a, alg=ns.REAL) == ns.natsorted(a, alg=ns.ns.REAL)
+        True
 
     """
-    pass
+    # Following were previously now options but are now defaults.
+    TYPESAFE         = T  = 0
+    INT              = I  = 0
+    VERSION          = V  = 0
+    DIGIT            = D  = 0
+    UNSIGNED         = U  = 0
 
+    # The below are options. The values are stored as powers of two
+    # so bitmasks can be used to extract the user's requested options.
+    FLOAT            = F  = 1 << 0
+    SIGNED           = S  = 1 << 1
+    REAL             = R  = FLOAT | SIGNED
+    NOEXP            = N  = 1 << 2
+    PATH             = P  = 1 << 3
+    LOCALEALPHA      = LA = 1 << 4
+    LOCALENUM        = LN = 1 << 5
+    LOCALE           = L  = LOCALEALPHA | LOCALENUM
+    IGNORECASE       = IC = 1 << 6
+    LOWERCASEFIRST   = LF = 1 << 7
+    GROUPLETTERS     = G  = 1 << 8
+    UNGROUPLETTERS   = UG = 1 << 9
+    CAPITALFIRST     = C  = UNGROUPLETTERS
+    NANLAST          = NL = 1 << 10
 
-# Sort algorithm "enum" values.
-_ns = {
-       'INT': 0,              'I': 0,
-       'FLOAT': 1,            'F': 1,
-       'UNSIGNED': 0,         'U': 0,
-       'SIGNED': 2,           'S': 2,
-       'VERSION': 0,          'V': 0,  # Shortcut for INT | UNSIGNED
-       'DIGIT': 0,            'D': 0,  # Shortcut for INT | UNSIGNED
-       'REAL': 3,             'R': 3,  # Shortcut for FLOAT | SIGNED
-       'NOEXP': 4,            'N': 4,
-       'PATH': 8,             'P': 8,
-       'LOCALE': 16,          'L': 16,
-       'IGNORECASE': 32,      'IC': 32,
-       'LOWERCASEFIRST': 64,  'LF': 64,
-       'GROUPLETTERS': 128,   'G': 128,
-       'UNGROUPLETTERS': 256, 'UG': 256,
-       'CAPITALFIRST': 256,   'C': 256,
-       'NANLAST': 512,        'NL': 512,
-       'TYPESAFE': 2048,      'T': 2048,
-       }
-# Populate the ns class with the _ns values.
-for x, y in _ns.items():
-    setattr(ns, x, y)
+    # The below are private options for internal use only.
+    _NUMERIC_ONLY    = REAL | NOEXP
+    _DUMB            = 1 << 31

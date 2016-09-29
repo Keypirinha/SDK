@@ -24,13 +24,14 @@ from natsort.natsort import (
     as_utf8,
     ns,
 )
+from natsort.utils import chain_functions
 from natsort._version import __version__
 
 __all__ = [
     'natsort_key',
     'natsort_keygen',
     'natsorted',
-    'versorted'
+    'versorted',
     'humansorted',
     'realsorted',
     'index_natsorted',
@@ -42,4 +43,10 @@ __all__ = [
     'as_ascii',
     'as_utf8',
     'ns',
+    'chain_functions',
 ]
+
+# Add the ns keys to this namespace for convenience.
+globals().update(
+    dict((k, v) for k, v in vars(ns).items() if not k.startswith('_'))
+)

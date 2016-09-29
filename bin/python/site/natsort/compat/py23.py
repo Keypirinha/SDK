@@ -16,6 +16,7 @@ import sys
 
 # Numeric form of version
 PY_VERSION = float(sys.version[:3])
+NEWPY = PY_VERSION >= 3.3
 
 # Assume all strings are Unicode in Python 2
 py23_str = str if sys.version[0] == '3' else unicode
@@ -32,9 +33,13 @@ py23_unichr = chr if sys.version[0] == '3' else unichr
 # zip as an iterator
 if sys.version[0] == '3':
     py23_zip = zip
+    py23_map = map
+    py23_filter = filter
 else:
     import itertools
     py23_zip = itertools.izip
+    py23_map = itertools.imap
+    py23_filter = itertools.ifilter
 
 
 # cmp_to_key was not created till 2.7, so require this for 2.6
@@ -85,7 +90,8 @@ def _modify_str_or_docstring(str_change_func):
             func = func_or_str
             doc = func.__doc__
 
-        doc = str_change_func(doc)
+        if doc is not None:
+            doc = str_change_func(doc)
 
         if func:
             func.__doc__ = doc
