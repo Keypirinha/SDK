@@ -8,7 +8,7 @@ Development Kit (SDK).
 
 * Create an add-on skeleton to start developing your plugin
 * Build a redistributable package that is ready-to-use by Keypirinha users
-* Test some features with the bundled standalone Python3 interpreter that is a
+* Test some features with the bundled standalone Python3 interpreter, which is a
   replicate of Keypirinha's embedded one
 
 
@@ -39,17 +39,20 @@ specifically to be as non-intrusive as possible.
 
 ### Environment Setup
 
-Once you have opened a terminal, you may want to setup SDK's environment by
+Once you have opened a console, you may want to setup SDK's environment by
 running the `cmd/kpenv` script.
 
-Particularly it defines `KEYPIRINHA_SDK`, that is the path to the directory of
+Particularly, it defines `KEYPIRINHA_SDK`, that is the path to the directory of
 the SDK.
 
-It also prepends the `cmd` directory to the `PATH` of the current terminal
+It also prepends the `cmd` directory to the `PATH` of the current console
 session.
 
 
 ### Create a Package
+
+This SDK allows to create the skeleton (i.e. the file and code structure) of
+your package by running a single command.
 
 Example:
 
@@ -57,16 +60,27 @@ Example:
 
 Usage:
 
-    kptmpl --help
+    kptmpl help
+
+Note that the file structure created is not suitable to be copied as-is under
+Keypirinha's `Packages` directory and is meant to be more flexible for the
+developer, not the user. May you wish to redistribute your package, the
+recommended way is to build it first.
 
 
 ### Build a Package
 
-Once you have developed and tested your package, you can build its final
-redistributable archive. Among other things, the `make.cmd` script located in
-your package directory allows you to do that.
+To build a package means all the files required for Keypirinha to load your
+plugin(s) will be encapsulated in a single zip archive that has got the
+`*.keypirinha-package` extension so users of your package can easily download
+and install it under the `profile/InstalledPackage` directory. This is the
+recommended form of redistribution.
 
-Note that the SDK's environment must be setup by running the `cmd/kpenv` script
+Once you have developed and tested your package, you can build its final
+redistributable archive (i.e. `*.keypirinha-package`) by using the `make.cmd`
+script located in your package directory.
+
+Note that SDK's environment must be setup by running the `cmd/kpenv` script
 first.
 
 Then, from your package's directory:
@@ -81,11 +95,12 @@ Usage:
 ### Python Interpreter
 
 The bootstrap script `cmd/kpy` allows to execute any Python3 script using the
-bundled and standalone interpreter, that is a replicate of the one that is
+bundled and standalone interpreter, which is a replicate of the one that is
 embedded into Keypirinha.
 
 You can also start the interpreter in *interactive mode*, as you would do with
-the `python.exe` executable of the standard Python distribution.
+the `python.exe` executable of the standard Python distribution (i.e. with no
+file argument).
 
 
 ## License
@@ -100,7 +115,7 @@ this directory for more information.
 1. Check for open issues or open a fresh issue to start a discussion around a
    feature idea or a bug.
 2. Fork [the repository][repo] on GitHub to start making your changes to the
-   **dev** branch (or branch off of it).
+   **dev** branch.
 3. Send a pull request.
 
 
