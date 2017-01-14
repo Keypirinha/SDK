@@ -1,5 +1,5 @@
 # Keypirinha launcher (keypirinha.com)
-# Copyright 2013-2016 Jean-Charles Lefebvre <polyvertex@gmail.com>
+# Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import re
 import sys
