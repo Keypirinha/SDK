@@ -68,6 +68,14 @@ developer, not the user. May you wish to redistribute your package, the
 recommended way is to build it first.
 
 
+### Where to start
+
+Besides from its [documentation](http://keypirinha.com/api.html), the best
+practical way to know how to use Keypirinha's API is to dig into the code of the
+[official packages](https://github.com/Keypirinha/Packages.git), as well as the
+`examples` directory provided by this SDK.
+
+
 ### Build a Package
 
 To build a package means all the files required for Keypirinha to load your
