@@ -118,7 +118,7 @@ class StressTest(kp.Plugin):
         settings = self.load_settings()
 
         was_enabled = self.enabled
-        global_enabled = settings.get_bool("enabled", "main", DEFAULT_ENABLED)
+        global_enabled = settings.get_bool("enable", "main", DEFAULT_ENABLED)
         self.enabled = global_enabled
 
         testers_count = settings.get_int(
@@ -135,7 +135,7 @@ class StressTest(kp.Plugin):
 
             if global_enabled and self.tester_id <= testers_count:
                 self.enabled = settings.get_bool(
-                    "enabled", section, self.enabled)
+                    "enable", section, self.enabled)
 
             self.catalog_size = settings.get_int(
                 "catalog_size", section,
