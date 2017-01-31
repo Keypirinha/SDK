@@ -12,6 +12,7 @@ DEFAULT_TESTERS_COUNT = 1
 DEFAULT_CATALOG_SIZE = 100000
 DEFAULT_CATALOG_BATCH_LEN = 0
 DEFAULT_SALT_ITEMS = False
+DEFAULT_MIN_TIME_BEFORE_COMMIT = 0.0
 
 class StressTest(kp.Plugin):
     """
@@ -23,6 +24,7 @@ class StressTest(kp.Plugin):
     catalog_size = DEFAULT_CATALOG_SIZE
     catalog_batch_size = DEFAULT_CATALOG_BATCH_LEN
     salt = DEFAULT_SALT_ITEMS
+    min_time_before_commit = DEFAULT_MIN_TIME_BEFORE_COMMIT
 
     def __init__(self):
         super().__init__()
@@ -75,6 +77,17 @@ class StressTest(kp.Plugin):
                 batches_committed += 1
                 catalog = []
 
+        insert_begin_time = time.monotonic()
+
+        if self.min_time_before_commit > .0:
+            elapsed = insert_begin_time - begin_time
+            if elapsed < self.min_time_before_commit:
+                self.dbg("IDLING ON_CATALOG for {:.1f} seconds".format(self.min_time_before_commit - elapsed))
+                if self.should_terminate(self.min_time_before_commit - elapsed):
+                    self.info("ABORTING ON_CATALOG (while idling)")
+                    return
+                self.dbg("RESUMING ON_CATALOG")
+
         if catalog:
             if not items_committed:
                 self.set_catalog(catalog)
@@ -84,8 +97,8 @@ class StressTest(kp.Plugin):
             batches_committed += 1
         end_time = time.monotonic()
 
-        self.info("Tester #{} committed {} items ({} batches) in {:.1f} seconds".format(
-            self.tester_id, items_committed, batches_committed, end_time - begin_time))
+        self.info("Tester #{} committed {} items ({} batches) in {:.1f} seconds (commit took {:.1f} seconds)".format(
+            self.tester_id, items_committed, batches_committed, end_time - begin_time, insert_begin_time - begin_time))
 
     def on_suggest(self, user_input, items_chain):
         if self.tester_id == 1:
@@ -145,6 +158,9 @@ class StressTest(kp.Plugin):
                 DEFAULT_CATALOG_BATCH_LEN)
             self.salt = settings.get_bool(
                 "salt", section, DEFAULT_SALT_ITEMS)
+            self.min_time_before_commit = settings.get_float(
+                "min_time_before_commit", section,
+                DEFAULT_MIN_TIME_BEFORE_COMMIT, min=0.0, max=60.0)
 
         if not self.enabled and was_enabled:
             self.set_catalog([])
