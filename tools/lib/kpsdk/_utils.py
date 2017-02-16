@@ -59,9 +59,10 @@ class ReMatch:
     def __getattr__(self, attr):
         return getattr(self.m, attr)
 
-def die(msg, exit_code=1, file=sys.stderr):
+def die(*objects, exit_code=1, file=sys.stderr, flush=True, **kwargs):
     """Print a message and ``sys.exit`` using the given code"""
-    print("ERROR:", msg, file=file, flush=True)
+    print("ERROR: ", end="", file=file, flush=False)
+    print(*objects, file=file, flush=flush, **kwargs)
     sys.exit(exit_code)
 
 def info(*objects, file=sys.stderr, flush=True, **kwargs):
@@ -122,6 +123,9 @@ def file_set_readonly(path, enable):
         else (attr | stat.S_IWRITE) & ~stat.S_IREAD)
     if new_attr != attr:
         os.chmod(path, new_attr)
+
+def is_iterable(obj):
+    return hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes))
 
 def validate_package_name(name):
     """
