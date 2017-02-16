@@ -92,44 +92,37 @@ class GUID(ct.Structure):
 def ZeroMemory(ctypes_obj):
     ct.memset(ct.addressof(ctypes_obj), 0, ct.sizeof(ctypes_obj))
 
-def declare_func(*args, **kwargs):
-    return declare_func2(*args, **kwargs)[0]
-
-def declare_func2(ctypes_dll, func_name, ret=None, arg=[], fail_on_missing=False):
-    if isinstance(arg, tuple):
-        arg = list(arg)
-    elif not isinstance(arg, list):
-        raise TypeError("arg argument")
-
-    # option: do not fail if the function is not supported by the os
-    if not fail_on_missing and not hasattr(ctypes_dll, func_name):
-        return None, None
-
-    # declare function in ctypes' namespace
+def declare_func(ctypes_dll, func_name, ret=None, args=[]):
+    """
+    Declare a DLL function by setting its ``ctypes`` attributes, and return
+    function's callable.
+    """
     func = getattr(ctypes_dll, func_name)
-    func.argtypes = arg
-    if ret is not None:
-        func.restype = ret
+    func.restype = ret
+    func.argtypes = args
+    return func
 
-    return func, func_name
-
-def _declare_global_func(*args, **kwargs):
-    kwargs.setdefault("fail_on_missing", True)
-    func, name = declare_func2(*args, **kwargs)
-    if func:
-        globals()[name] = func
+def _import_func(ctypes_dll, func_name, *args, **kwargs):
+    func = declare_func(ctypes_dll, func_name, *args, **kwargs)
+    globals()[func_name] = func
 
 
-_declare_global_func(kernel32, "GetLastError", ret=DWORD)
-_declare_global_func(kernel32, "GetLogicalDrives", ret=DWORD)
-_declare_global_func(kernel32, "GetThreadErrorMode", ret=DWORD)
-_declare_global_func(kernel32, "SetLastError", arg=[DWORD])
-_declare_global_func(kernel32, "SetThreadErrorMode", ret=BOOL, arg=[DWORD, LPDWORD])
+_import_func(kernel32, "GetLastError", ret=DWORD)
+_import_func(kernel32, "GetLogicalDrives", ret=DWORD)
+_import_func(kernel32, "GetThreadErrorMode", ret=DWORD)
+_import_func(kernel32, "SetLastError", args=[DWORD])
+_import_func(kernel32, "SetThreadErrorMode", ret=BOOL, args=[DWORD, LPDWORD])
 
-_declare_global_func(user32, "FindWindowW", ret=HWND, arg=[LPCWSTR, LPCWSTR])
-_declare_global_func(user32, "SetWindowLongPtrW", ret=LONG_PTR, arg=[HWND, ct.c_int, LONG_PTR])
+_import_func(user32, "FindWindowW", ret=HWND, args=[LPCWSTR, LPCWSTR])
+_import_func(shell32, "SHGetKnownFolderPath", ret=ct.HRESULT, args=[ct.POINTER(GUID), DWORD, HANDLE, ct.POINTER(PWSTR)])
 
-_declare_global_func(shell32, "SHGetKnownFolderPath", ret=ct.HRESULT, arg=[ct.POINTER(GUID), DWORD, HANDLE, ct.POINTER(PWSTR)])
+# 32/64 bit
+try:
+    GetWindowLongPtr = declare_func(user32, "GetWindowLongPtrW", ret=LONG_PTR, args=[HWND, ct.c_int])
+    SetWindowLongPtr = declare_func(user32, "SetWindowLongPtrW", ret=LONG_PTR, args=[HWND, ct.c_int, LONG_PTR])
+except AttributeError:
+    GetWindowLongPtr = declare_func(user32, "GetWindowLongW", ret=LONG, args=[HWND, ct.c_int])
+    SetWindowLongPtr = declare_func(user32, "SetWindowLongW", ret=LONG, args=[HWND, ct.c_int, LONG])
 
 
 def get_logical_drives():
