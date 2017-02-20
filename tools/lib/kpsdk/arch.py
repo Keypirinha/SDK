@@ -2,6 +2,7 @@
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import os
+from . import _cli
 from . import _globscan
 from . import _utils
 from . import _zipfile
@@ -43,7 +44,7 @@ def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
         try:
             if _utils.file_mtime_ns(output_file) > most_recent_mtime:
                 if verbose:
-                    _utils.info("Archive", os.path.basename(output_file),
+                    _cli.info("Archive", os.path.basename(output_file),
                                 "is up-to-date.")
                 return 0
         except:
@@ -51,7 +52,7 @@ def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
 
     # write the archive
     if verbose:
-        _utils.info("Archive", os.path.basename(output_file) + "...")
+        _cli.info("Archive", os.path.basename(output_file) + "...")
     try:
         with _zipfile.ZipFile(output_file, mode="w") as zfile:
             for arch_base_folder, entries in folded_entries.items():
@@ -67,7 +68,7 @@ def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
 
     # delete the archive if it's empty
     if arch_empty and os.path.exists(output_file):
-        _utils.warn("Empty archive!")
+        _cli.warn("Empty archive!")
         os.remove(output_file)
 
     # enable the read-only property if needed

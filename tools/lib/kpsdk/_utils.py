@@ -1,19 +1,14 @@
 # Keypirinha launcher (keypirinha.com)
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
-import locale
 import os
 import re
-import subprocess
-import sys
 
 __all__ = [
     "Unbuffered", "ReMatch",
-    "die", "info", "warn", "err",
-    "merge_dicts",
-    #"cmd_output",
+    "merge_dicts", "is_iterable",
     "dir_is_empty",
-    "file_head", "file_mtime_ns", "file_set_readonly",
+    "file_head", "file_mtime_ns", "file_get_readonly", "file_set_readonly",
     "validate_package_name"]
 
 class Unbuffered:
@@ -59,26 +54,6 @@ class ReMatch:
     def __getattr__(self, attr):
         return getattr(self.m, attr)
 
-def die(*objects, exit_code=1, file=sys.stderr, flush=True, **kwargs):
-    """Print a message and ``sys.exit`` using the given code"""
-    print("ERROR: ", end="", file=file, flush=False)
-    print(*objects, file=file, flush=flush, **kwargs)
-    sys.exit(exit_code)
-
-def info(*objects, file=sys.stderr, flush=True, **kwargs):
-    """Print a informational message"""
-    print(*objects, file=file, flush=flush, **kwargs)
-
-def warn(*objects, file=sys.stderr, flush=True, **kwargs):
-    """Print a warning message"""
-    print("WARNING: ", end="", file=file, flush=False)
-    print(*objects, file=file, flush=flush, **kwargs)
-
-def err(*objects, file=sys.stderr, flush=True, **kwargs):
-    """Print an error message"""
-    print("ERROR: ", end="", file=file, flush=False)
-    print(*objects, file=file, flush=flush, **kwargs)
-
 def merge_dicts(*dicts):
     """Merge several dicts"""
     final_dict = None
@@ -89,13 +64,12 @@ def merge_dicts(*dicts):
             final_dict.update(d)
     return {} if final_dict is None else final_dict
 
-#def cmd_output(args=[], splitlines=False):
-#    """Run a command and return its decoded output"""
-#    output = subprocess.check_output(args)
-#    output = output.decode(
-#                sys.__stdout__.encoding if sys.__stdout__
-#                else locale.getpreferredencoding())
-#    return output.splitlines() if splitlines else output.rstrip()
+def is_iterable(obj):
+    """
+    Check if the passed object looks like an iterable, excluding :py:class:`str`
+    and :py:class:`bytes` objects.
+    """
+    return hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes))
 
 def dir_is_empty(path):
     """
@@ -115,6 +89,11 @@ def file_mtime_ns(file):
     """Get the ``os.stat(file).st_mtime_ns`` value."""
     return os.stat(file).st_mtime_ns
 
+def file_get_readonly(path, follow_symlinks=True):
+    """Check if a file has got the read-only attribute."""
+    attr = os.stat(path, follow_symlinks=follow_symlinks).st_mode
+    return not (attr & stat.S_IWRITE)
+
 def file_set_readonly(path, enable):
     """Apply or remove the read-only property of a given file."""
     attr = os.stat(path)[stat.ST_MODE]
@@ -123,9 +102,6 @@ def file_set_readonly(path, enable):
         else (attr | stat.S_IWRITE) & ~stat.S_IREAD)
     if new_attr != attr:
         os.chmod(path, new_attr)
-
-def is_iterable(obj):
-    return hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes))
 
 def validate_package_name(name):
     """
