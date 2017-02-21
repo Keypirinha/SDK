@@ -1,6 +1,7 @@
 # Keypirinha launcher (keypirinha.com)
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
+import datetime
 import glob
 import os
 import shutil
@@ -72,7 +73,8 @@ def action_package(opts, args):
     tmpl_dict = {
         'package_name': package_name,
         'package_name_lower': package_name.lower(),
-        'plugin_name': package_name.replace(" ", "")}
+        'plugin_name': package_name.replace(" ", ""),
+        'year': str(datetime.datetime.now().year)}
 
     kpsdk.info('Creating package "{}" in {}'.format(package_name, dest_dir))
     xform_tree(tmpl_dir, dest_dir, tmpl_dict)
