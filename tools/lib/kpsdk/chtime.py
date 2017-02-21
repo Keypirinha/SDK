@@ -7,7 +7,7 @@ from . import _cli
 from . import _globscan
 from . import windll
 
-__all__ = ["chtime"]
+__all__ = ["chtime", "init_filetime"]
 
 class _WinApi:
     __slots__ = ("symbols")
@@ -90,7 +90,7 @@ def _unix_timestamp_to_win_filetime(unix):
     ft_timestamp_lo = ft_timestamp & 0xffffffff
     return windll.FILETIME(ft_timestamp_lo, ft_timestamp_hi)
 
-def _init_filetime(target_time):
+def init_filetime(target_time):
     if isinstance(target_time, datetime.datetime):
         return _unix_timestamp_to_win_filetime(dt.timestamp())
 
@@ -123,6 +123,7 @@ def _init_filetime(target_time):
 def chtime(target_time, input_patterns, recursive=False, include_hidden=True,
            mtime=True, atime=True, ctime=False, dry_run=False):
     # target_time can be:
+    # * a windll.FILETIME
     # * a datetime object
     # * an int/float (unix timestamp)
     # * an str ("now", "utcnow", "midnight" or "utcmidnight")
@@ -131,7 +132,10 @@ def chtime(target_time, input_patterns, recursive=False, include_hidden=True,
         raise ValueError("at least mtime, atime or ctime must be true")
 
     winapi = _WinApi()
-    filetime = _init_filetime(target_time)
+    if isinstance(target_time, windll.FILETIME):
+        filetime = target_time
+    else:
+        filetime = init_filetime(target_time)
     atime = filetime if atime else None
     ctime = filetime if ctime else None
     mtime = filetime if mtime else None
