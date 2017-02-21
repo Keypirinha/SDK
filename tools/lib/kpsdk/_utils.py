@@ -5,7 +5,7 @@ import os
 import re
 
 __all__ = [
-    "Unbuffered", "ReMatch",
+    "Unbuffered", "ReMatch", "ScopedWorkDirChange",
     "merge_dicts", "is_iterable",
     "dir_is_empty",
     "file_head", "file_mtime_ns", "file_get_readonly", "file_set_readonly",
@@ -18,9 +18,11 @@ class Unbuffered:
     """
     def __init__(self, stream):
         self.stream = stream
+
     def write(self, data):
         self.stream.write(data)
         self.stream.flush()
+
     def __getattr__(self, attr):
         return getattr(self.stream, attr)
 
@@ -39,20 +41,41 @@ class ReMatch:
     """
     def __init__(self):
         self.m = None
+
     def __del__(self):
         re.purge()
+
     def clear(self):
         self.m = None
+
     def match(self, *objects, **kwargs):
         self.m = re.match(*objects, **kwargs)
         return bool(self.m)
+
     def group(self, index_or_name, default=None):
         try: return self.m.group(index_or_name)
         except IndexError: return default
+
     def __bool__(self):
         return bool(self.m)
+
     def __getattr__(self, attr):
         return getattr(self.m, attr)
+
+class ScopedWorkDirChange():
+    __slots__ = ("workdir", "prevdir")
+
+    def __init__(self, workdir):
+        self.workdir = workdir
+
+    def __enter__(self):
+        self.prevdir = os.getcwd()
+        os.chdir(self.workdir)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.prevdir:
+            os.chdir(self.prevdir)
 
 def merge_dicts(*dicts):
     """Merge several dicts"""
