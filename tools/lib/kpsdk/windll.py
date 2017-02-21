@@ -158,6 +158,7 @@ class ScopedSysErrorMode():
                 self.old_mode = None
         except AttributeError:
             self.error = None
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.error == 0 and self.old_mode is not None:
