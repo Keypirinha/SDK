@@ -3,6 +3,7 @@
 
 import os.path
 import sys
+import traceback
 import zipfile
 import kpsdk
 import kpsdk.arch
@@ -54,11 +55,14 @@ def main():
         print_usage()
         return 0
     try:
-        opts, args = kpsdk.getopts(opts=(
-            "help,h", "hidden", "keep", "readonly", "recursive,r"),
-        ignore_unknown_opts=True) # so we can parse "-archive" and "-name" manually
-    except Exception as e:
-        print_usage(str(e))
+        opts, args, missing_opts = kpsdk.getopts(
+            opts=("help,h", "hidden", "keep", "readonly", "recursive,r"),
+            ignore_unknown_opts=True) # so we can parse "-a" options manually
+    except ValueError as exc:
+        print_usage(str(exc))
+        return 1
+    except:
+        traceback.print_exc()
         return 1
     if opts['help']:
         print_usage()

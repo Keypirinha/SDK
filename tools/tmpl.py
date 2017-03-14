@@ -111,7 +111,7 @@ def main():
         print_usage()
         return 0
     try:
-        opts, args = kpsdk.getopts(opts=("help,h", ))
+        opts, args, missing_opts = kpsdk.getopts(opts=("help,h", ))
     except Exception as e:
         print_usage(str(e))
         return 1

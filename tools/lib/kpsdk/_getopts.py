@@ -8,28 +8,30 @@ __all__ = ["getopts", "breakopt"]
 
 def getopts(args=None, opts=[], ignore_unknown_opts=False):
     """
-    A standalone command line arguments parser.
+    Yet another command line arguments parser.
 
-    *args* is the list of the arguments to parse. ``sys.argv[1:]`` by default.
+    *args* is the sequence of the arguments to parse (``sys.argv[1:]`` by
+    default).
 
-    *opts* is a list of definitions of the options to interpret.
-    Each element in the list is a string defining one option and its properties.
-    Definition format is as follows:
-    ``<name>[,<name2>[,...]][<properties>][=<value_type>[+|N]]]``
+    *opts* is a sequence of definitions of the options to interpret, where each
+    element is a string that defines one option and its properties.
+    The format of a definition is as follows::
+
+        ``<name>[,<name2>[,...]][(<traits>)][=<value_type>[?|*|+|N]]]``
 
     Where ``<name>`` is the name of the option that will directly be used by the
     caller of the script like in ``-name`` or ``--name``. You can optionally
     declare a comma-separated list of one or several additional names as long as
     none of them collide with any other.
 
-    ``<properties>`` is an optional field to specify some properties to your
-    option. It is a string of one or several letters in no particular order and
-    enclosed by parentheses. Each letter represents a property.
-    Accepted properties:
+    ``<traits>`` is an optional field, between parentheses, to specify some
+    traits to your option. It is a string of one or several letters in no
+    particular order where each letter correspond to a trait.
+    Accepted traits:
 
-        * ``r``: means this option is required and a ValueError exception will
-          be raised if it is missing
-        * ``m``: indicates an option that can be specified several times
+        * ``r``: this option is required and a ValueError exception will be
+          raised if it is missing
+        * ``m``: this option that can be specified several times
 
     ``<value_type>`` is a single letter that indicates two things:
 
@@ -40,24 +42,28 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
           - ``i`` for an integer
           - ``f`` for a float
 
-    ``<value_type>`` can be followed by ``+`` to indicate several values are
-    required. It is also possible to append a positive integer instead of ``+``,
-    in order to require a specific number of values.
+    Also, ``<value_type>`` can be followed by:
+
+        * ``?`` to indicate value is optional
+        * ``*`` to indicate zero to several values may be specified
+        * ``+`` to indicate one or several values are required
+        * A positive integer to indicate a specific number of values are
+          expected (a ``ValueError`` exception is raised otherwise)
 
     Example:
         getopts(opts=[
             "help,h",
-            "dir,d(r)=s",
-            "keyval=s+2",
+            "dir,d(r)=s?",
+            "keyval=s2",
             "verbose,v(rm)",
             "count,loops,c=u",
             "my-long-option-name"])
     """
     args = sys.argv[1:] if args is None else args[:] # copy
 
-    opts_dict = {}     # name: def_dict
-    opts_names = {}    # secondary name: name
-    opts_required = [] # names of every options marked as 'required'
+    opts_dict = {}    # name: def_dict
+    opts_names = {}   # secondary name: name
+    missing_opts = [] # names of every options marked as 'required'
     opts_out = {}
 
     # interpret options definitions
@@ -66,7 +72,7 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
         m = re.match(r"""^
             (?P<names>[0-9a-zA-Z][0-9a-zA-Z\,\-]*)
             (?:\( (?P<props>[rm]+) \))?
-            (?:\= (?P<valtype>[suif]) (?P<valcount>(?:\+|[0-9]+))? )?
+            (?:\= (?P<valtype>[suif]) (?P<valcount>(?:\?|\*|\+|[0-9]+))? )?
             $""", opt_def, re.VERBOSE | re.ASCII)
         if not m:
             raise ValueError(
@@ -77,17 +83,22 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
         mdict['names'] = " ".join(mdict['names'].split(",")).split()
         mdict['required'] = "r" in mdict['props']
         mdict['multi'] = "m" in mdict['props']
+        mdict['is_array'] = mdict['multi'] # also, see later to see how is_array is setup
         del mdict['props']
         name = mdict['names'][0]
 
         if not len(mdict['valcount']):
             mdict['valcount'] = 1
-        elif mdict['valcount'] == "+":
-            mdict['valcount'] = 0
+        elif mdict['valcount'] == "?":
+            pass
+        elif mdict['valcount'] in ("*", "+"):
+            mdict['is_array'] = True
         else:
             mdict['valcount'] = int(mdict['valcount'])
             if mdict['valcount'] <= 0:
                 raise ValueError("getopts: invalid valcount for option '{}'".format(name))
+            elif mdict['valcount'] > 1:
+                mdict['is_array'] = True
 
         # 'names' contains the primary name and optional secondary names
         # ensure none of them has been used by an other option already
@@ -104,17 +115,19 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
         # if this option is required, keep track of that somewhere to be able
         # to easily check later
         if mdict['required']:
-            opts_required.append(name)
+            missing_opts.append(name)
 
-        # populate the output dictionary so the caller doesn't have to check
-        # first if a key exists
+        # * populate the output dictionary so the caller doesn't have to check
+        #   first if a key exists
+        # * if 'valtype' is not specified, we consider opts_out[name] to be
+        #   either a flag, or a counter
         if mdict['valtype']:
-            opts_out[name] = [] if (mdict['multi'] or mdict['valcount'] != 1) else None
+            opts_out[name] = [] if mdict['is_array'] else None
         else:
             opts_out[name] = 0 if mdict['multi'] else False
 
     if not opts_dict.keys():
-        return opts_out, args
+        return opts_out, args, missing_opts
 
     # read args
     idx = 0
@@ -132,24 +145,30 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
             opt_name = opt_info['names'][0]
 
             args.pop(idx)
-            if opt_name in opts_required:
-                opts_required.remove(opt_name)
+
+            if opt_name in missing_opts:
+                missing_opts.remove(opt_name)
 
             if not opt_info['valtype']:
                 if opt_value is not None:
                     raise ValueError("option " + opt_name +
                         " has an unexpected parameter: " + opt_value)
+
                 if not opt_info['multi']:
                     opts_out[opt_name] = True
                 else:
                     opts_out[opt_name] += 1
             else:
                 if opt_value is not None:
+                    # here, value was specified using the form "--option=value"
+                    # so we artificially push back *value* to the *args* list to
+                    # avoid having to write code that would deal with this
+                    # special case
                     args[idx:0] = [opt_value]
                     opt_value = None
+
                 valcount = 0
-                while opt_info['valcount'] == 0 or valcount < opt_info['valcount']:
-                    valcount += 1
+                while True:
                     try:
                         opt_value = args.pop(idx)
                     except IndexError:
@@ -160,13 +179,14 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
                     if opt_value[0] == "-" and (
                             opt_value in ("-", "--") or
                             opt_value.lstrip("-") in opts_names):
-                        if opt_info['valcount'] == 0:
-                            args[idx:0] = [opt_value]
+                        if opt_info['valcount'] in ("?", "*"):
+                            args[idx:0] = [opt_value] # push back the arg
                             break
                         else:
                             raise ValueError(
                                 "option " + opt_name + " is missing argument(s)")
 
+                    # validate value with the expected type, if precised
                     if opt_info['valtype'] == "s":
                         pass
                     elif opt_info['valtype'] == "u":
@@ -189,16 +209,24 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
                         raise ValueError("valtype '" + \
                             opt_info['valtype'] + "' not supported")
 
-                    if opt_info['valcount'] == 1 and not opt_info['multi']:
-                        opts_out[opt_name] = opt_value
-                    else:
+                    if mdict['is_array']:
                         opts_out[opt_name].append(opt_value)
+                    else:
+                        opts_out[opt_name] = opt_value
 
-    # ensure we've got every required parameters
-    if len(opts_required) > 0:
-        raise ValueError("missing parameter(s): " + ", ".join(opts_required))
+                    valcount += 1
 
-    return opts_out, args
+                    if mdict['valcount'] == "?":
+                        break
+                    elif mdict['valcount'] in ("*", "+"):
+                        continue
+                    elif isinstance(mdict['valcount'], int):
+                        if valcount >= mdict['valcount']:
+                            break
+                    else:
+                        raise RuntimeError # duh?!
+
+    return opts_out, args, missing_opts
 
 def breakopt(arg):
     m = re.match(r"^\-\-?([0-9a-zA-Z][0-9a-zA-Z\-]*)(?:\=(.+))?$", arg, re.ASCII)
