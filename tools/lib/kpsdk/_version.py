@@ -10,11 +10,14 @@ class Version:
     A helper class that allows to parse and validate the version numbers of
     Keypirinha and its packages.
     """
-    ZERO = (0, )
-
     MAJOR_MULTIPLIER = 10000000
     MINOR_MULTIPLIER = 10000
     PATCH_MULTIPLIER = 1
+
+    ZERO = (0, )
+
+    tupl = ZERO
+    title = None
 
     def __init__(self, init_value=None):
         self.tupl = self.ZERO
@@ -52,6 +55,8 @@ class Version:
         return self._cmp(other, "__ge__")
 
     def set(self, init_value):
+        self.title = None
+
         # build tuple
         if isinstance(init_value, self.__class__):
             elems = list(init_value.tupl)
@@ -66,20 +71,24 @@ class Version:
                 elems[0], init_value = divmod(init_value, self.MAJOR_MULTIPLIER)
                 elems[1], init_value = divmod(init_value, self.MINOR_MULTIPLIER)
                 elems[2], init_value = divmod(init_value, self.PATCH_MULTIPLIER)
-                assert(init_value == 0)
+                assert init_value == 0
         elif isinstance(init_value, str):
             elems = None
-            # quite flexible regex to deal with git-style tag names (i.e. "v1.2.3")
-            rem = re.match(r"^[vV]?(\d+(?:\.\d+)*)(?:\-([a-zA-Z0-9][\w\-\.]+))?$", init_value, re.ASCII)
+            # flexible regex to deal with git-style conventional tag naming like
+            # "v1.2.3" and "1.2-some_name"
+            rem = re.match(
+                r"^[vV]?(\d+(?:\.\d+)*)(?:\-([a-zA-Z0-9][\w\-\.]+))?$",
+                init_value, re.ASCII)
             if rem:
                 elems = list(map(int, rem.group(1).split(".")))
+                self.title = rem.group(2)
         else:
             raise TypeError("unsupported init_value type")
 
-        # validate tuple and setup member
-        # * Note that combined version is an uint32_t (i.e. max is 429,496,7295)
-        #   so Major version must be <=428 (i.e. not <=429) to ensure that Minor
-        #   and Patch are not out of boundaries.
+        # validate tuple and assign member
+        # * note that combined version is an uint32_t (i.e. max is 429,496,7295)
+        #   so Major version must be <=428 instead of <=429 because we want to
+        #   ensure that Minor and Patch are not out of boundaries
         if (isinstance(elems, list) and
                 1 <= len(elems) <= 3 and
                 all(isinstance(n, int) for n in elems) and
@@ -99,7 +108,7 @@ class Version:
         # Microsoft's version format: "M,m,p,0"
         return self.getstr(prefix="", suffix="", sep=",", full=4)
 
-    def getint(self):
+    def getcombinedint(self):
         ft = self.gettuple(full=True)
         return (
             (ft[0] * self.MAJOR_MULTIPLIER) +
@@ -124,13 +133,14 @@ class Version:
 if __name__ == "__main__":
     if not __debug__:
         raise Exception("debug mode not enabled")
-    assert(not Version())
-    assert(Version("2") == Version(20000000))
-    assert(Version("2.3") < Version(4289999999))
-    assert(Version("2.3") < 4289999999)
-    assert(Version("2.3") == (2, 3))
-    assert(Version("2.3") == (2, 3, 0))
-    assert(Version("v2.3") == (2, 3))
-    assert(Version("428.999.9999") == Version(4289999999))
-    assert(Version() < Version("0.1"))
-    assert(Version(Version("2.3")) == Version("2.3"))
+    assert not Version()
+    assert Version("2") == Version(20000000)
+    assert Version("1.1.1") == Version(10010001)
+    assert Version("2.3") < Version(4289999999)
+    assert Version("2.3") < 4289999999
+    assert Version("2.3") == (2, 3)
+    assert Version("2.3") == (2, 3, 0)
+    assert Version("v2.3") == (2, 3)
+    assert Version("428.999.9999") == Version(4289999999)
+    assert Version() < Version("0.1")
+    assert Version(Version("2.3")) == Version("2.3")
