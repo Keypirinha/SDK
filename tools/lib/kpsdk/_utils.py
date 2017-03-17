@@ -3,11 +3,14 @@
 
 import os
 import re
+import shutil
+import stat
 
 __all__ = [
     "Unbuffered", "ReMatch", "ScopedWorkDirChange",
     "merge_dicts", "is_iterable",
     "dir_is_empty",
+    "rmrf",
     "file_head", "file_mtime_ns", "file_get_readonly", "file_set_readonly",
     "validate_package_name"]
 
@@ -69,8 +72,11 @@ class ScopedWorkDirChange():
         self.workdir = workdir
 
     def __enter__(self):
-        self.prevdir = os.getcwd()
-        os.chdir(self.workdir)
+        if self.workdir is not None:
+            self.prevdir = os.getcwd()
+            os.chdir(self.workdir)
+        else:
+            self.prevdir = None
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -103,6 +109,17 @@ def dir_is_empty(path):
         return False
     return True
 
+def rmrf(path):
+    """Remove a file or a directory recursively, even in read-only mode"""
+    if os.path.isdir(path):
+        def _onerror(func, path, excinfo):
+            file_set_readonly(path, False, follow_symlinks=False)
+            func(path)
+        shutil.rmtree(path, ignore_errors=False, onerror=_onerror)
+    else:
+        file_set_readonly(path, False, follow_symlinks=False)
+        os.remove(path)
+
 def file_head(file):
     """Read the first line of a text file."""
     with open(file, "rt") as f:
@@ -117,14 +134,18 @@ def file_get_readonly(path, follow_symlinks=True):
     attr = os.stat(path, follow_symlinks=follow_symlinks).st_mode
     return not (attr & stat.S_IWRITE)
 
-def file_set_readonly(path, enable):
-    """Apply or remove the read-only property of a given file."""
-    attr = os.stat(path)[stat.ST_MODE]
+def file_set_readonly(path, enable, follow_symlinks=True, recursive=False):
+    """Apply or remove the read-only property of a given file or directory."""
+    st_mode = os.stat(path, follow_symlinks=follow_symlinks).st_mode
     new_attr = (
-        (attr | stat.S_IREAD) & ~stat.S_IWRITE if enable
-        else (attr | stat.S_IWRITE) & ~stat.S_IREAD)
-    if new_attr != attr:
+        (st_mode | stat.S_IREAD) & ~stat.S_IWRITE if enable
+        else (st_mode | stat.S_IWRITE) & ~stat.S_IREAD)
+    if new_attr != st_mode:
         os.chmod(path, new_attr)
+
+    if recursive and stat.S_ISDIR(st_mode):
+        for entry in os.scandir(path):
+            file_set_readonly(entry.path, enable, follow_symlinks, recursive)
 
 def validate_package_name(name):
     """

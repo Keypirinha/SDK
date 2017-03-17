@@ -82,6 +82,8 @@ class Version:
             if rem:
                 elems = list(map(int, rem.group(1).split(".")))
                 self.title = rem.group(2)
+                if self.title:
+                    self.title = self.title.strip("-")
         else:
             raise TypeError("unsupported init_value type")
 

@@ -76,7 +76,7 @@ def enable_colors(enable=True):
         atexit.unregister(_atexit_disable_colors)
 
 def die(*objects, exit_code=1, file=sys.stderr, style=Fore.RED, **kwargs):
-    """Print a message and ``sys.exit`` using the given code"""
+    """Print a message and :py:func:`sys.exit` using the given code"""
     with ScopedColoredStream(file, style, flush_on_exit=True) as stream:
         stream.write("ERROR: ")
         print(*objects, file=stream, flush=False, **kwargs)
@@ -109,7 +109,7 @@ def ask(message, ofile=sys.stdout, ifile=sys.stdin, style=Fore.MAGENTA):
     Print a question on *ofile* and wait for an answer on *ifile* using
     :py:meth:`io.TextIOBase.readline`.
 
-    *color* may be ``None`` for non-colored output (this does not override the
+    *style* may be ``None`` for non-colored output (this does not override the
     behavior setup by :py:func:`enable_colors`).
     """
     with ScopedColoredStream(ofile, style, flush_on_exit=True) as stream:
@@ -135,10 +135,10 @@ def ask_yesno(question, default=None, ofile=sys.stdout, ifile=sys.stdin,
 
     with ScopedColoredStream(ofile) as ostream:
         while True:
-            if color is not None:
-                ostream.set_style(color)
+            if style is not None:
+                ostream.set_style(style)
             ostream.write(question)
-            if color is not None:
+            if style is not None:
                 ostream.reset_style()
             ostream.flush()
 
@@ -156,8 +156,8 @@ def ask_yesno(question, default=None, ofile=sys.stdout, ifile=sys.stdin,
 CalledProcessError = subprocess.CalledProcessError
 TimeoutExpired = subprocess.TimeoutExpired
 
-def run(args=[], splitlines=False,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+def run(args=[], splitlines=False, rstrip=True,
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         timeout=None, encoding=True, errors="strict",
         die_on_error=True, die_on_exc=True,
         die_file=sys.stderr, die_style=Fore.RED):
@@ -170,6 +170,11 @@ def run(args=[], splitlines=False,
     If *splitlines* is true, ``stdout`` and ``stderr`` members will both be
     line-split if and only if they are instance of either :py:class:`str` or
     :py:class:`bytes` (using their respective ``splitlines()`` method.
+
+    If *rstrip* is true, ``stdout`` and ``stderr`` members will both be
+    rstrip'ed if and only if they are instance of either :py:class:`str` or
+    :py:class:`bytes` (using their respective ``rstrip()`` method.
+    This argument works regardless of the *splitlines* value.
 
     *stdout*, *stderr*, *timeout*, and *errors* are passed as-is to
     :py:func:`subprocess.run`.
@@ -284,8 +289,15 @@ def run(args=[], splitlines=False,
 
     if splitlines:
         if isinstance(res.stdout, (bytes, str)):
-            res.stdout = res.stdout.splitlines()
+            res.stdout = [line.rstrip() if rstrip else line
+                          for line in res.stdout.splitlines()]
         if isinstance(res.stderr, (bytes, str)):
-            res.stderr = res.stderr.splitlines()
+            res.stderr = [line.rstrip() if rstrip else line
+                          for line in res.stderr.splitlines()]
+    elif rstrip:
+        if isinstance(res.stdout, (bytes, str)):
+            res.stdout = res.stdout.rstrip()
+        if isinstance(res.stderr, (bytes, str)):
+            res.stderr = res.stderr.rstrip()
 
     return res
