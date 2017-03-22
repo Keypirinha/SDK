@@ -160,10 +160,11 @@ CalledProcessError = subprocess.CalledProcessError
 TimeoutExpired = subprocess.TimeoutExpired
 
 def run(args=[], splitlines=False, rstrip=True,
-        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        stdin=None, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         timeout=None, encoding=True, errors="strict",
         die_on_error=True, die_on_exc=True,
-        die_file=sys.stderr, die_style=Fore.RED):
+        die_file=sys.stderr, die_style=Fore.RED,
+        **kwargs):
     """
     A wrapper around :py:func:`subprocess.run` to automatically deal with any
     raised exception, error return code, decoding and line splitting.
@@ -179,8 +180,8 @@ def run(args=[], splitlines=False, rstrip=True,
     :py:class:`bytes` (using their respective ``rstrip()`` method.
     This argument works regardless of the *splitlines* value.
 
-    *stdout*, *stderr*, *timeout*, and *errors* are passed as-is to
-    :py:func:`subprocess.run`.
+    *stdin*, *stdout*, *stderr*, *timeout*, and *errors* are passed as-is to
+    :py:func:`subprocess.run`, as well as the remaining *kwargs*.
 
     *encoding* is passed as-is as well unless it is exactly ``True``, in which
     case it is assigned the value of ``sys.__stdout__.encoding`` if possible, or
@@ -214,8 +215,9 @@ def run(args=[], splitlines=False, rstrip=True,
             encoding = locale.getpreferredencoding(False)
 
     try:
-        res = subprocess.run(args, stdout=stdout, stderr=stderr,
-                             timeout=timeout, encoding=encoding, errors=errors)
+        res = subprocess.run(args, stdin=stdin, stdout=stdout, stderr=stderr,
+                             timeout=timeout, encoding=encoding, errors=errors,
+                             **kwargs)
 
         error_occurred = False
         if callable(die_on_error):
