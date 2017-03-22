@@ -2,6 +2,7 @@
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import atexit
+import getpass
 import locale
 import os
 import pprint
@@ -104,7 +105,8 @@ def err(*objects, file=sys.stderr, flush=True, style=Fore.RED, **kwargs):
         stream.write("ERROR: ")
         print(*objects, file=stream, flush=False, **kwargs)
 
-def ask(message, ofile=sys.stdout, ifile=sys.stdin, style=Fore.MAGENTA):
+def ask(message, ofile=sys.stderr, ifile=sys.stdin, style=Fore.MAGENTA,
+        noecho=False):
     """
     Print a question on *ofile* and wait for an answer on *ifile* using
     :py:meth:`io.TextIOBase.readline`.
@@ -114,9 +116,15 @@ def ask(message, ofile=sys.stdout, ifile=sys.stdin, style=Fore.MAGENTA):
     """
     with ScopedColoredStream(ofile, style, flush_on_exit=True) as stream:
         stream.write(message)
-    return ifile.readline()
 
-def ask_yesno(question, default=None, ofile=sys.stdout, ifile=sys.stdin,
+    if not noecho:
+        return ifile.readline().rstrip("\n\r")
+    else:
+        if ifile != sys.stdin:
+            raise ValueError("noecho option implies input from stdin")
+        return getpass.getpass(prompt="", stream=ofile)
+
+def ask_yesno(question, default=None, ofile=sys.stderr, ifile=sys.stdin,
               style=Fore.MAGENTA):
     """
     Same as :py:func:`ask` but expect a yes/no answer.
@@ -133,25 +141,20 @@ def ask_yesno(question, default=None, ofile=sys.stdout, ifile=sys.stdin,
     else:
         question += " [y/N] "
 
-    with ScopedColoredStream(ofile) as ostream:
-        while True:
-            if style is not None:
-                ostream.set_style(style)
+    while True:
+        with ScopedColoredStream(ofile, style, flush_on_exit=True) as ostream:
             ostream.write(question)
-            if style is not None:
-                ostream.reset_style()
-            ostream.flush()
 
-            ans_orig = ifile.readline()
-            ans = ans_orig.strip().lower()
-            if ans in ("y", "ye", "yes"):
-                return True
-            elif ans in ("n", "no"):
-                return False
-            elif not len(ans) and default is not None:
-                return default
-            if len(ans_orig) and ans_orig[-1] != "\n":
-                ostream.write("\n")
+        ans_orig = ifile.readline()
+        ans = ans_orig.strip().lower()
+        if ans in ("y", "ye", "yes"):
+            return True
+        elif ans in ("n", "no"):
+            return False
+        elif not len(ans) and default is not None:
+            return default
+        if len(ans_orig) and ans_orig[-1] != "\n":
+            ofile.write("\n")
 
 CalledProcessError = subprocess.CalledProcessError
 TimeoutExpired = subprocess.TimeoutExpired
