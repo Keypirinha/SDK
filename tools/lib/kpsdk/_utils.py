@@ -208,11 +208,11 @@ def validate_package_name(name):
 
     if name_lc in (
             "keypirinha", "all", "app", "application", "builtin", "builtins",
-            "cache", "data", "default", "env", "extern", "external", "hook",
-            "icon", "image", "intern", "internal", "kpsdk", "local", "locale",
-            "main", "name", "nil", "none", "null", "official", "package",
-            "plugin", "python", "res", "resource", "sdk", "temp", "theme",
-            "tmp", "type", "script", "user", "var"):
+            "cache", "data", "default", "extern", "external", "hook", "icon",
+            "image", "intern", "internal", "kpsdk", "local", "locale", "main",
+            "name", "nil", "none", "null", "official", "package", "plugin",
+            "python", "res", "resource", "sdk", "temp", "theme", "tmp", "type",
+            "script", "user", "var"):
         return False
 
     return True
