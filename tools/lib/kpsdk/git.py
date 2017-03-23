@@ -3,23 +3,32 @@
 
 import os.path
 import re
+import sys
 from . import _cli
 from . import _utils
 from . import _version
 
-__all__ = ["run", "repo_info"]
+__all__ = ["run", "interactive", "repo_info"]
 
-def run(git_cmd="git", git_opts=[], repo_dir=None, splitlines=False, rstrip=True, **kwargs):
+def run(*args, repo_dir=None, git_cmd="git",
+        splitlines=False, rstrip=True, **kwargs):
     with _utils.ScopedWorkDirChange(repo_dir): # None arg allowed
-        return _cli.run((git_cmd, ) + tuple(git_opts),
+        return _cli.run((git_cmd, ) + tuple(*args),
                         splitlines=splitlines, rstrip=rstrip,
                         **kwargs)
 
-def repo_info(repo_dir, git_cmd="git", git_opts=[]):
+def interactive(*args, repo_dir=None, git_cmd="git",
+                stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr,
+                **kwargs):
+    return run(*args, repo_dir=repo_dir, git_cmd=git_cmd,
+               stdin=stdin, stdout=stdout, stderr=stderr,
+               **kwargs)
+
+def repo_info(repo_dir, opts=[], git_cmd="git"):
 
     def _git(*args, **kwargs):
         with _utils.ScopedWorkDirChange(repo_dir):
-            return run(git_cmd, git_opts=[*args], **kwargs)
+            return run(tuple(*args) + tuple(opts), git_cmd=git_cmd, **kwargs)
 
     if not repo_dir:
         raise ValueError("invalid repo_dir argument")
