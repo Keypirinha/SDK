@@ -106,7 +106,7 @@ def err(*objects, file=sys.stderr, flush=True, style=Fore.RED, **kwargs):
         print(*objects, file=stream, flush=False, **kwargs)
 
 def ask(message, ofile=sys.stderr, ifile=sys.stdin, style=Fore.MAGENTA,
-        noecho=False):
+        noecho=False, accept_empty=True):
     """
     Print a question on *ofile* and wait for an answer on *ifile* using
     :py:meth:`io.TextIOBase.readline`.
@@ -114,15 +114,21 @@ def ask(message, ofile=sys.stderr, ifile=sys.stdin, style=Fore.MAGENTA,
     *style* may be ``None`` for non-colored output (this does not override the
     behavior setup by :py:func:`enable_colors`).
     """
-    with ScopedColoredStream(ofile, style, flush_on_exit=True) as stream:
-        stream.write(message)
+    if noecho and ifile != sys.stdin:
+        raise ValueError("noecho option implies input from stdin")
 
-    if not noecho:
-        return ifile.readline().rstrip("\n\r")
-    else:
-        if ifile != sys.stdin:
-            raise ValueError("noecho option implies input from stdin")
-        return getpass.getpass(prompt="", stream=ofile)
+    while True:
+        with ScopedColoredStream(ofile, style, flush_on_exit=True) as stream:
+            stream.write(message)
+
+        if noecho:
+            ans = getpass.getpass(prompt="", stream=ofile)
+        else:
+            ans = ifile.readline().rstrip("\n\r")
+
+        if not accept_empty and not ans.strip():
+            continue
+        return ans
 
 def ask_yesno(question, default=None, ofile=sys.stderr, ifile=sys.stdin,
               style=Fore.MAGENTA):
