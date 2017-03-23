@@ -1,6 +1,8 @@
 # Keypirinha launcher (keypirinha.com)
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
+import hashlib
+import mimetypes
 import os
 import re
 import shutil
@@ -12,6 +14,7 @@ __all__ = [
     "dir_is_empty",
     "rmrf",
     "file_head", "file_mtime_ns", "file_get_readonly", "file_set_readonly",
+    "mime_guess", "sha256_file",
     "validate_package_name"]
 
 class Unbuffered:
@@ -146,6 +149,31 @@ def file_set_readonly(path, enable, follow_symlinks=True, recursive=False):
     if recursive and stat.S_ISDIR(st_mode):
         for entry in os.scandir(path):
             file_set_readonly(entry.path, enable, follow_symlinks, recursive)
+
+def mime_guess(url, default="application/octet-stream"):
+    """Guess MIME type from the given *url*"""
+    typ, encoding = mimetypes.guess_type(url)
+    if typ:
+        return typ
+
+    ext = os.path.splitext(url)[1].lower()
+    if ext in (".md5", ".sha1", ".sha256", ".sha512"):
+        return "text/plain"
+
+    return default
+
+def sha256_file(path, std_format=False):
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            hasher.update(chunk)
+
+    if std_format:
+        # '*' indicates binary mode
+        return "{} *{}".format(hasher.hexdigest().lower(),
+                               os.path.basename(path))
+    else:
+        return hasher.hexdigest()
 
 def validate_package_name(name):
     """
