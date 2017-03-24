@@ -13,8 +13,7 @@ __all__ = ["run", "interactive", "repo_info"]
 def run(*args, repo_dir=None, git_cmd="git",
         splitlines=False, rstrip=True, **kwargs):
     with _utils.ScopedWorkDirChange(repo_dir): # None arg allowed
-        return _cli.run((git_cmd, ) + tuple(*args),
-                        splitlines=splitlines, rstrip=rstrip,
+        return _cli.run((git_cmd, *args), splitlines=splitlines, rstrip=rstrip,
                         **kwargs)
 
 def interactive(*args, repo_dir=None, git_cmd="git",
@@ -28,7 +27,7 @@ def repo_info(repo_dir, opts=[], git_cmd="git"):
 
     def _git(*args, **kwargs):
         with _utils.ScopedWorkDirChange(repo_dir):
-            return run(tuple(*args) + tuple(opts), git_cmd=git_cmd, **kwargs)
+            return run(*args, *opts, git_cmd=git_cmd, **kwargs)
 
     if not repo_dir:
         raise ValueError("invalid repo_dir argument")
