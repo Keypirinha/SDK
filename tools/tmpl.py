@@ -7,50 +7,10 @@ import os
 import shutil
 import sys
 import kpsdk
+import kpsdk.tmpl
 
-TEMPLATES_ROOT = os.path.join(
-                        os.path.dirname(os.path.abspath(__file__)), "templates")
-TEMPLATES_EXTENSION = ".tmpl"
-
-def xform_str(text, tmpl_dict):
-    for name, value in tmpl_dict.items():
-        text = text.replace("{{" + name + "}}", value)
-    return text
-
-def xform_file(src_file, dest_file, tmpl_dict):
-    with open(src_file, mode="rt", encoding="utf-8", errors="strict") as fin:
-        with open(dest_file, mode="wt", encoding="utf-8", errors="strict") as fout:
-            for line in fin:
-                fout.write(xform_str(line, tmpl_dict))
-    shutil.copystat(src_file, dest_file, follow_symlinks=False)
-
-def xform_tree(root_src, root_dest, tmpl_dict, level=0):
-    def _mkdir(new_dir, copy_stats_from=None):
-        if not os.path.exists(new_dir):
-            os.mkdir(new_dir)
-            if copy_stats_from is not None:
-                shutil.copystat(copy_stats_from, new_dir, follow_symlinks=False)
-        elif os.path.isdir(new_dir):
-            if not kpsdk.dir_is_empty(new_dir):
-                kpsdk.die("destination directory not empty: " + new_dir)
-        else:
-            kpsdk.die("destination exists and is not a directory: " + new_dir)
-
-    if level == 0:
-        _mkdir(root_dest)
-
-    for entry in os.scandir(root_src):
-        src_path = os.path.join(root_src, entry.name)
-        dest_path = os.path.join(root_dest, xform_str(entry.name, tmpl_dict))
-        if entry.is_dir():
-            _mkdir(dest_path, copy_stats_from=src_path)
-            xform_tree(src_path, dest_path, tmpl_dict, level + 1)
-        elif entry.is_file():
-            if entry.name.endswith(TEMPLATES_EXTENSION):
-                dest_path = dest_path[0:-len(TEMPLATES_EXTENSION)]
-                xform_file(src_path, dest_path, tmpl_dict)
-            else:
-                shutil.copy2(src_path, dest_path, follow_symlinks=False)
+TEMPLATES_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "templates")
 
 def action_package(opts, args):
     if not os.path.isdir(TEMPLATES_ROOT):
@@ -77,7 +37,7 @@ def action_package(opts, args):
         'year': str(datetime.datetime.now().year)}
 
     kpsdk.info('Creating package "{}" in {}'.format(package_name, dest_dir))
-    xform_tree(tmpl_dir, dest_dir, tmpl_dict)
+    kpsdk.tmpl.do_tree(tmpl_dir, dest_dir, tmpl_dict)
     return 0
 
 def print_usage(error=None):
