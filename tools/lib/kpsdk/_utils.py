@@ -162,18 +162,26 @@ def mime_guess(url, default="application/octet-stream"):
 
     return default
 
-def sha256_file(path, std_format=False):
+def sha256_file(path):
+    """
+    Compute the SHA256 sum of *file* and return a tuple containing two strings.
+
+    Example:
+
+    ::
+        return (
+            "a238aca5e168e20c9115e970574fb5a4e045da92a18863dbdfd8b17dbcb858e8",
+            "a238aca5e168e20c9115e970574fb5a4e045da92a18863dbdfd8b17dbcb858e8 *keypirinha-2.15.3-x86-portable.7z")
+    """
     hasher = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(64 * 1024), b""):
             hasher.update(chunk)
 
-    if std_format:
-        # '*' indicates binary mode
-        return "{} *{}".format(hasher.hexdigest().lower(),
-                               os.path.basename(path))
-    else:
-        return hasher.hexdigest()
+    # note: '*' indicates binary mode
+    return (
+        hasher.hexdigest(),
+        "{} *{}".format(hasher.hexdigest().lower(), os.path.basename(path)))
 
 def validate_package_name(name):
     """
