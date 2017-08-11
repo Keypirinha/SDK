@@ -125,6 +125,7 @@ this directory for more information.
 2. Fork [the repository][repo] on GitHub to start making your changes to the
    **dev** branch.
 3. Send a pull request.
+   Please stick to **one feature per PR**.
 
 
 [repo]: https://github.com/Keypirinha/SDK.git
