@@ -16,6 +16,7 @@ class Config:
     A replacement of ``configparser.ConfigParser`` that is compliant with
     Keypirinha's configuration file format.
     """
+    ENV_SECTION_NAME = "env"
     VAR_SECTION_NAME = "var"
 
     def __init__(self, extra_defaults={}):
@@ -26,6 +27,14 @@ class Config:
             comment_prefixes=("#"),
             strict=True, # disallow section/option duplicates
             interpolation=configparser.ExtendedInterpolation())
+
+        # populate the [env] section
+        env_dict = {}
+        for name, value in os.environ.items():
+            env_dict[name] = os.path.expandvars(value)
+        self.parser.read_dict(
+            {self.ENV_SECTION_NAME: env_dict},
+            source='<env>')
 
         # populate the [var] section with the KNOWNFOLDER_* and
         # KNOWNFOLDERGUID_* values
@@ -43,10 +52,9 @@ class Config:
                             continue
                         known_folders_dict['KNOWNFOLDER_' + kf_name] = kf_path
                         known_folders_dict['KNOWNFOLDERGUID_' + kf_name] = kf_guid
-            if known_folders_dict:
-                self.parser.read_dict(
-                    {self.VAR_SECTION_NAME: known_folders_dict},
-                    source="<known_folders>")
+            self.parser.read_dict(
+                {self.VAR_SECTION_NAME: known_folders_dict},
+                source="<known_folders>")
 
         if extra_defaults:
             self.parser.read_dict(extra_defaults, source="<extra_defaults>")
