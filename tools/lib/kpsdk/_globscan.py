@@ -83,7 +83,7 @@ def globscan(
     be used concurrently to this function.
     """
     return list(iglobscan(input_paths, recursive, allow_wildcards,
-                            include_dirs, include_hidden, raise_not_found))
+                          include_dirs, include_hidden, raise_not_found))
 
 def iglobscan(
         input_paths, recursive=False, allow_wildcards=True,
@@ -116,9 +116,14 @@ def iglobscan(
                     raise ValueError("'**' wildcard is not supported")
                 if not allow_wildcards:
                     raise ValueError("input path has wildcard(s): " + path)
+                input_paths_len = len(input_paths)
                 for globbed_path in _glob.iglob(
                         path, include_hidden=include_hidden, recursive=False):
                     input_paths.append(os.path.realpath(globbed_path))
+                # at level 0, we want to notify caller that an explicitely
+                # specified file/dir is missing
+                if raise_not_found and input_paths_len == len(input_paths):
+                    raise FileNotFoundError("file not found: " + path)
             elif not os.path.exists(path):
                 # at level 0, we want to notify caller that an explicitely
                 # specified file/dir is missing

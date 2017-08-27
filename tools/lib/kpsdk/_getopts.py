@@ -172,8 +172,9 @@ def getopts(args=None, opts=[], ignore_unknown_opts=False):
                     try:
                         opt_value = args.pop(idx)
                     except IndexError:
-                        raise ValueError(
-                            "option " + opt_name + " is missing argument(s)")
+                        if opt_info['valcount'] not in ("?", "*"):
+                            raise ValueError(
+                                "option " + opt_name + " is missing argument(s)")
 
                     # ensure end-user did not forget some args
                     if opt_value[0] == "-" and (
