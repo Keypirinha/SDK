@@ -36,6 +36,9 @@ class Version:
     def __bool__(self):
         return self.tupl > self.ZERO
 
+    def __hash__(self):
+        return hash((self.tupl, self.title))
+
     def __lt__(self, other):
         return self._cmp(other, "__lt__")
 
