@@ -47,6 +47,9 @@ Options:
         Set output archive file as "read-only".
     -r --recursive
         Scan given input directories recursively.
+    --time <TIME>
+        Set the time of the files to archive where TIME can be one of the
+        following values: file (default), now, midnight.
 \
 """)
 
@@ -56,7 +59,8 @@ def main():
         return 0
     try:
         opts, args, missing_opts = kpsdk.getopts(
-            opts=("help,h", "hidden", "keep", "readonly", "recursive,r"),
+            opts=("help,h", "hidden", "keep", "readonly", "recursive,r",
+                  "time=s"),
             ignore_unknown_opts=True) # so we can parse "-a" options manually
     except ValueError as exc:
         print_usage(str(exc))
@@ -71,7 +75,7 @@ def main():
         print_usage("no output archive specified")
         return 1
 
-    # break the remaining positional args
+    # parse the remaining positional args
     # * we need the path of at least one output archive
     # * we need at least one input path pattern
     # * input patterns may be split by "--archive" and "--name" options
@@ -149,7 +153,7 @@ def main():
             arch_file, folded_patterns,
             check_modtime=opts['keep'], recursive=opts['recursive'],
             include_hidden=opts['hidden'], apply_readonly=opts['readonly'],
-            verbose=True)
+            verbose=True, time_spec=opts['time'])
 
     return 0
 

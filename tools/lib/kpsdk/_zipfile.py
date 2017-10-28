@@ -1,6 +1,7 @@
 # Keypirinha launcher (keypirinha.com)
 # Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
+from enum import Enum
 import os
 import stat
 import time
@@ -12,7 +13,7 @@ _IS_WINDOWS = os.name.lower() == "nt"
 if _IS_WINDOWS:
     import ctypes
 
-__all__ = ["ZipFile"]
+__all__ = ["ZipFile", "TimeSpec", "string_to_timespec"]
 
 # Setup maximum compression level
 # * This is a dirty hack. The zipfile module doesn't offer us to change the
@@ -22,6 +23,18 @@ __all__ = ["ZipFile"]
 #   module with the zlib.Z_DEFAULT_COMPRESSION constant.
 # * Note that this hack is not thread-safe but we don't mind here.
 zlib.Z_DEFAULT_COMPRESSION = zlib.Z_BEST_COMPRESSION
+
+class TimeSpec(Enum):
+    FILE = 0
+    NOW = 1
+    MIDNIGHT = 2
+
+def string_to_timespec(s):
+    if isinstance(s, str):
+        s = s.upper()
+        if s in TimeSpec.__members__:
+            return TimeSpec[s]
+    raise ValueError("TimeSpec string expected")
 
 class ZipFile:
     """
@@ -52,7 +65,7 @@ class ZipFile:
             self.compression = None
             zf.close()
 
-    def write(self, file, arcname=None, compress_type=None, comment=None):
+    def write(self, file, arcname=None, compress_type=None, time_spec=TimeSpec.FILE, comment=None):
         """
         A replacement of zipfile.write() that keeps original file attributes on
         Unix **and** Windows systems, and optionally allows to specify the
@@ -67,7 +80,6 @@ class ZipFile:
         # stat file
         file_stat = os.stat(file)
         is_dir = stat.S_ISDIR(file_stat.st_mode)
-        file_mtime = time.localtime(file_stat.st_mtime)
 
         # entry name
         if arcname is None:
@@ -78,7 +90,8 @@ class ZipFile:
         # init the ZipInfo structure
         zinfo = zipfile.ZipInfo(arcname_enc)
         #zinfo.filename = arcname_enc
-        zinfo.date_time = file_mtime[0:6]
+        zinfo.date_time = self.timespec_to_zipinfo(time_spec,
+                                                   file_stat.st_mtime)
         zinfo.compress_type = compress_type
         if comment is not None:
             zinfo.comment, comment_is_utf8 = self.encode_name(comment)
@@ -104,7 +117,7 @@ class ZipFile:
             with open(file, "rb") as f:
                 self.zfile.writestr(zinfo, f.read())
 
-    def write_empty_dir(self, arcname, comment=None):
+    def write_empty_dir(self, arcname, time_spec=TimeSpec.NOW, comment=None):
         """Explicitly add an empty directory entry to the archive"""
         self._checkzfile()
 
@@ -114,6 +127,7 @@ class ZipFile:
 
         zinfo = zipfile.ZipInfo(arcname_enc)
         #zinfo.filename = arcname_enc
+        zinfo.date_time = self.timespec_to_zipinfo(time_spec)
         zinfo.compress_type = zipfile.ZIP_STORED
         zinfo.external_attr = 0o40775 << 16 # unix attributes drwxr-xr-x
         zinfo.external_attr |= 0x10 # MS-DOS directory flag
@@ -126,7 +140,8 @@ class ZipFile:
 
     def write_mapped(
             self, files, arcname_prefix="", include_base_dirname=False,
-            include_hidden=False, include_empty_dirs=True, compress_type=None):
+            include_hidden=False, include_empty_dirs=True, compress_type=None,
+            time_spec=TimeSpec.FILE):
         self._checkzfile()
 
         if isinstance(files, str):
@@ -169,13 +184,13 @@ class ZipFile:
                         if os.path.isfile(src_path):
                             entry_name = entry_base_name + self.cleanup_name(src_relative, False)
                             empty_dir = False
-                            self.write(src_path, entry_name, compress_type)
+                            self.write(src_path, entry_name, compress_type, time_spec)
                 finally:
                     os.chdir(oldcwd)
                 if empty_dir and include_empty_dirs:
-                    zfile.write_empty_dir(arc_basename)
+                    self.write_empty_dir(arc_basename, time_spec)
             else:
-                self.write(file, entry_base_name, compress_type)
+                self.write(file, entry_base_name, compress_type, time_spec)
 
     def _checkzfile(self):
         if not self.zfile:
@@ -229,3 +244,23 @@ class ZipFile:
                 if encoding != "cp437" or force_cp437:
                     raise ValueError('zip entry name not {} compliant: "{}"'.format(encoding.upper(), arcname))
         raise Exception # Should Never Get Here (c)
+
+    @classmethod
+    def timespec_to_zipinfo(cls, time_spec, file_unix=None):
+        if isinstance(time_spec, TimeSpec):
+            if time_spec == TimeSpec.FILE:
+                if file_unix is None:
+                    time_spec = TimeSpec.NOW
+                else:
+                    return time.localtime(file_unix)[0:6]
+
+            if time_spec == TimeSpec.NOW:
+                return time.localtime()[0:6]
+
+            if time_spec == TimeSpec.MIDNIGHT:
+                tm = time.localtime()
+                return (tm[0], tm[1], tm[2], 0, 0, 0)
+
+            raise ValueError("time_spec")
+        else:
+            raise TypeError("time_spec")

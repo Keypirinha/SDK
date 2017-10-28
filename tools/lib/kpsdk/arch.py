@@ -28,11 +28,19 @@ def _list_entries(folded_patterns, recursive, include_hidden):
     return entries, most_recent_mtime
 
 def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
-            include_hidden=False, apply_readonly=False, verbose=True):
+            include_hidden=False, apply_readonly=False, verbose=True,
+            time_spec=_zipfile.TimeSpec.FILE):
     if not isinstance(folded_patterns, dict):
         folded_patterns = {"": folded_patterns}
     elif not _utils.is_iterable(folded_patterns):
-        raise ValueError
+        raise ValueError("folded_patterns")
+
+    if time_spec is None:
+        time_spec = _zipfile.TimeSpec.FILE
+    elif isinstance(time_spec, str):
+        time_spec = _zipfile.string_to_timespec(time_spec)
+    elif not isinstance(time_spec, _zipfile.TimeSpec):
+        raise TypeError("time_spec")
 
     # get the list of all the files to add to the archive, folded by name
     folded_entries, most_recent_mtime = _list_entries(
@@ -45,7 +53,7 @@ def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
             if _utils.file_mtime_ns(output_file) > most_recent_mtime:
                 if verbose:
                     _cli.info("Archive", os.path.basename(output_file),
-                                "is up-to-date.")
+                              "is up-to-date.")
                 return 0
         except:
             pass
@@ -59,7 +67,9 @@ def archive(output_file, folded_patterns, check_modtime=False, recursive=False,
                 for entry in entries:
                     entry_name = _zipfile.ZipFile.join_names(
                         arch_base_folder, entry.relpath, is_dir=False)
-                    zfile.write(entry.path, arcname=entry_name)
+                    zfile.write(entry.path,
+                                arcname=entry_name,
+                                time_spec=time_spec)
             arch_empty = not len(zfile.infolist())
     except:
         if os.path.exists(output_file):
