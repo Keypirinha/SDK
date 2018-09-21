@@ -75,6 +75,9 @@ practical way to know how to use Keypirinha's API is to dig into the code of the
 [official packages](https://github.com/Keypirinha/Packages.git), as well as the
 `examples` directory provided by this SDK.
 
+Also, the exposed part of Keypirinha's Python API, on which packages rely on,
+has its own [repository](https://github.com/Keypirinha/PythonLib).
+
 
 ### Build a Package
 
