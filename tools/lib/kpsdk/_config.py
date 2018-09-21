@@ -1,5 +1,5 @@
 # Keypirinha launcher (keypirinha.com)
-# Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
+# Copyright 2013-2018 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import configparser
 import ctypes
@@ -34,12 +34,12 @@ class Config:
             env_dict[name] = os.path.expandvars(value)
         self.parser.read_dict(
             {self.ENV_SECTION_NAME: env_dict},
-            source='<env>')
+            source="<env>")
 
         # populate the [var] section with the KNOWNFOLDER_* and
         # KNOWNFOLDERGUID_* values
+        var_dict = {}
         if _IS_WINDOWS:
-            known_folders_dict = {}
             for name in dir(windll):
                 if name.startswith("FOLDERID_"):
                     value = getattr(windll, name)
@@ -50,11 +50,11 @@ class Config:
                             kf_path = windll.get_known_folder_path(kf_guid)
                         except OSError:
                             continue
-                        known_folders_dict['KNOWNFOLDER_' + kf_name] = kf_path
-                        known_folders_dict['KNOWNFOLDERGUID_' + kf_name] = kf_guid
-            self.parser.read_dict(
-                {self.VAR_SECTION_NAME: known_folders_dict},
-                source="<known_folders>")
+                        var_dict['KNOWNFOLDER_' + kf_name] = kf_path
+                        var_dict['KNOWNFOLDERGUID_' + kf_name] = kf_guid
+        self.parser.read_dict(
+            {self.VAR_SECTION_NAME: var_dict},
+            source="<var>")
 
         if extra_defaults:
             self.parser.read_dict(extra_defaults, source="<extra_defaults>")

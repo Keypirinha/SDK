@@ -1,5 +1,5 @@
 # Keypirinha launcher (keypirinha.com)
-# Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
+# Copyright 2013-2018 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import atexit
 import getpass
@@ -9,9 +9,7 @@ import pprint
 import sys
 import subprocess
 from .packages import colorama
-from .packages.colorama import Fore
-from .packages.colorama import Back
-from .packages.colorama import Style
+from .packages.colorama import Fore, Back, Style
 
 __all__ = [
     "enable_colors", "ColoredStream", "ScopedColoredStream",
@@ -22,26 +20,38 @@ __all__ = [
 _colors_enabled = False
 
 class ColoredStream:
+    __slots__ = ("_stream")
+
     def __init__(self, stream):
         convert = False if not _colors_enabled else None
-        self._stream = colorama.initialise.wrap_stream(
-                stream, convert=convert, strip=None, autoreset=None, wrap=True)
-
-        for name in ("BLACK", "RED", "GREEN", "YELLOW", "BLUE", "MAGENTA",
-                     "CYAN", "WHITE"):
-            def _method(self):
-                self.set_style(getattr(colorama.Fore, name))
-            setattr(self, "set_" + name.lower(), _method)
+        self._stream = colorama.AnsiToWin32(
+            stream, convert=convert, strip=None, autoreset=False)
 
     def __getattr__(self, name):
-        return getattr(self._stream, name)
+        try:
+            return getattr(self._stream, name)
+        except AttributeError:
+            return getattr(self._stream.stream, name)
 
     def set_style(self, style):
-        if style is not None:
-            self._stream.write(style)
+        if self._stream.convert:
+            if style is None:
+                self._stream.reset_all()
+            else:
+                self._stream.write(style)
 
     def reset_style(self):
-        self._stream.write(colorama.Style.RESET_ALL)
+        if self._stream.convert:
+            self._stream.reset_all()
+
+    def set_black(self):   self.set_style(colorama.Fore.BLACK)
+    def set_red(self):     self.set_style(colorama.Fore.RED)
+    def set_green(self):   self.set_style(colorama.Fore.GREEN)
+    def set_yellow(self):  self.set_style(colorama.Fore.YELLOW)
+    def set_blue(self):    self.set_style(colorama.Fore.BLUE)
+    def set_magenta(self): self.set_style(colorama.Fore.MAGENTA)
+    def set_cyan(self):    self.set_style(colorama.Fore.CYAN)
+    def set_white(self):   self.set_style(colorama.Fore.WHITE)
 
 class ScopedColoredStream(ColoredStream):
     __slots__ = ("style", "flush_on_exit")
@@ -61,13 +71,12 @@ class ScopedColoredStream(ColoredStream):
             self.flush()
 
 def _atexit_disable_colors():
-    for stream in (sys.stdout, sys.stderr):
-        colstream = ColoredStream(stream)
-        colstream.reset_style()
-        colstream.flush()
+    for stream in (sys.__stdout__, sys.__stderr__):
+        colorama.AnsiToWin32(stream).reset_all()
+        stream.flush()
 
 def enable_colors(enable=True):
-    """Allow/disallow colors on TTY output."""
+    """Enable/disable colors on TTY output (disabled by default)"""
     global _colors_enabled
     if enable and not _colors_enabled:
         _colors_enabled = True
