@@ -1,5 +1,5 @@
 # Keypirinha launcher (keypirinha.com)
-# Copyright 2013-2017 Jean-Charles Lefebvre <polyvertex@gmail.com>
+# Copyright 2013-2018 Jean-Charles Lefebvre <polyvertex@gmail.com>
 
 import argparse
 import sys
