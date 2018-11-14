@@ -40,18 +40,16 @@ class Config:
         # KNOWNFOLDERGUID_* values
         var_dict = {}
         if _IS_WINDOWS:
-            for name in dir(windll):
-                if name.startswith("FOLDERID_"):
-                    value = getattr(windll, name)
-                    if isinstance(value, str):
-                        kf_name = name[len("FOLDERID_"):].upper()
-                        kf_guid = value
-                        try:
-                            kf_path = windll.get_known_folder_path(kf_guid)
-                        except OSError:
-                            continue
-                        var_dict['KNOWNFOLDER_' + kf_name] = kf_path
-                        var_dict['KNOWNFOLDERGUID_' + kf_name] = kf_guid
+            for element in FOLDERID.__members__.values():
+                try:
+                    kf_path = windll.get_known_folder_path(
+                        element, flags=windll.KF_FLAG_DONT_VERIFY)
+                except OSError:
+                    continue
+
+                kf_name = element.name.upper()
+                var_dict['KNOWNFOLDER_' + kf_name] = kf_path
+                var_dict['KNOWNFOLDERGUID_' + kf_name] = element.value
         self.parser.read_dict(
             {self.VAR_SECTION_NAME: var_dict},
             source="<var>")

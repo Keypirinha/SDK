@@ -198,8 +198,8 @@ def run(args=[], splitlines=False, rstrip=True,
     *stdin*, *stdout*, *stderr*, *timeout*, and *errors* are passed as-is to
     :py:func:`subprocess.run`, as well as the remaining *kwargs*.
 
-    *encoding* is passed as-is as well unless it is exactly ``True``, in which
-    case it is assigned the value of ``sys.__stdout__.encoding`` if possible, or
+    *encoding* is passed as-is as well unless it is strictly ``True``, in which
+    case it is set to the value of ``sys.__stdout__.encoding`` if possible, or
     ``locale.getpreferredencoding(False)`` otherwise.
 
     Note that you may have to overwrite the default *encoding* value (i.e.
