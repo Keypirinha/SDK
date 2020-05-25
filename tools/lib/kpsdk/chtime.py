@@ -95,7 +95,7 @@ def init_filetime(target_time):
         return _unix_timestamp_to_win_filetime(dt.timestamp())
 
     elif isinstance(target_time, (int, float)):
-        dt = datetime.fromtimestamp(target_time, datetime.timezone.utc)
+        dt = datetime.datetime.fromtimestamp(target_time, datetime.timezone.utc)
         return _unix_timestamp_to_win_filetime(dt.timestamp())
 
     elif isinstance(target_time, str):
