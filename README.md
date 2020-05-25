@@ -125,8 +125,7 @@ this directory for more information.
 
 1. Check for open issues or open a fresh issue to start a discussion around a
    feature idea or a bug.
-2. Fork [the repository][repo] on GitHub to start making your changes to the
-   **dev** branch.
+2. Fork [the repository][repo] on GitHub to start making your changes.
 3. Send a pull request.
    Please stick to **one feature per PR**.
 
